@@ -733,6 +733,21 @@
   .circuit-step.locked { opacity: 0.4; }
   .circuit-step.done { opacity: 0.58; border-left-color: var(--cobalt); }
   .circuit-step.active { border-left-color: var(--cobalt-light); }
+  .circuit-step.running { border-left-color: var(--green); }
+  .running-tag { color: var(--green-light); font-weight: 700; }
+  .circuit-run-group { display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
+  .circuit-timer {
+    font-family: "SF Mono", "Roboto Mono", monospace; font-weight: 800; font-size: 13.5px;
+    color: var(--green-light); min-width: 42px; text-align: center; font-variant-numeric: tabular-nums;
+  }
+  .circuit-finish {
+    flex-shrink: 0;
+    font-size: 12px; font-weight: 800; color: #0a1018;
+    background: linear-gradient(180deg, var(--green-light), var(--green));
+    padding: 8px 13px; border-radius: 999px;
+    cursor: pointer;
+  }
+  .circuit-finish:active { transform: scale(0.92); }
   .circuit-num-canvas { flex-shrink: 0; display: block; }
   .circuit-info { flex: 1; min-width: 0; }
   .circuit-name { font-size: 14px; font-weight: 700; line-height: 1.25; }
@@ -1127,6 +1142,9 @@ const circuitSequence = buildCircuitSequence();
 // Satz einer Übung -> Pause -> Satz der nächsten Übung -> Pause -> ...
 // gruppiert nach Runden. Nur der jeweils nächste offene Satz ist antippbar.
 function renderCircuit(dateKey) {
+  // Läuft noch ein Satz von einem anderen Tag (z.B. nach Navigieren)? Dann verwerfen.
+  if (runningStep && runningStep.dateKey !== dateKey) stopRunning();
+
   const cnts = exercises.map((_, i) => getSetCount(dateKey, i));
   let activeFound = false;
   let lastRound = -1;
@@ -1138,17 +1156,34 @@ function renderCircuit(dateKey) {
     }
     const ex = exercises[step.exIdx];
     const done = cnts[step.exIdx] > step.setIdx;
+    const isRunningThis = !!runningStep && runningStep.dateKey === dateKey
+      && runningStep.exIdx === step.exIdx && runningStep.setIdx === step.setIdx;
+
     let status = "locked";
     if (done) status = "done";
-    else if (!activeFound) { status = "active"; activeFound = true; }
+    else if (!activeFound) { status = isRunningThis ? "running" : "active"; activeFound = true; }
+
+    const loggedTime = done ? getSetTime(dateKey, step.exIdx, step.setIdx) : null;
+    const targetLine = "Satz " + (step.setIdx + 1) + "/" + ex.sets + " &middot; " + ex.target + " " + ex.unit
+      + (loggedTime !== null ? " &middot; " + formatDuration(loggedTime) + " gebraucht" : "");
+
+    let actionHTML = "";
+    if (status === "active") {
+      actionHTML = "<div class='circuit-go' data-ex='" + step.exIdx + "' data-set='" + step.setIdx + "'>Los</div>";
+    } else if (status === "running") {
+      actionHTML = "<div class='circuit-run-group'>"
+        + "<span class='circuit-timer' id='runningTimer'>00:00</span>"
+        + "<div class='circuit-finish' data-ex='" + step.exIdx + "' data-set='" + step.setIdx + "'>Abschließen</div>"
+        + "</div>";
+    }
 
     html += "<div class='circuit-step " + status + "' data-ex='" + step.exIdx + "' data-set='" + step.setIdx + "'>"
       + "<canvas class='circuit-num-canvas' width='26' height='26' data-icon='num' data-num='" + (step.setIdx + 1) + "' data-done='" + (done ? 1 : 0) + "'></canvas>"
       + "<div class='circuit-info'>"
-      + "<div class='circuit-name'>" + ex.name + "</div>"
-      + "<div class='circuit-target'>Satz " + (step.setIdx + 1) + "/" + ex.sets + " &middot; " + ex.target + " " + ex.unit + "</div>"
+      + "<div class='circuit-name'>" + ex.name + (status === "running" ? " &middot; <span class='running-tag'>Läuft&hellip;</span>" : "") + "</div>"
+      + "<div class='circuit-target'>" + targetLine + "</div>"
       + "</div>"
-      + (status === "active" ? "<div class='circuit-go' data-ex='" + step.exIdx + "'>Los</div>" : "")
+      + actionHTML
       + "</div>";
 
     if (idx < circuitSequence.length - 1) {
@@ -1156,16 +1191,26 @@ function renderCircuit(dateKey) {
     }
   });
   html += "</div>";
+  if (runningStep && runningStep.dateKey === dateKey) {
+    setTimeout(updateRunningTimerDisplay, 0);
+  }
   return html;
 }
 
-// Bindet Klicks für den gerade gerenderten Zirkel: aktiver Satz -> abhaken,
-// zuletzt abgehakter Satz einer Übung -> antippen zum Zurücknehmen.
+// Bindet Klicks für den gerade gerenderten Zirkel: Los -> Stoppuhr startet,
+// Abschließen -> Satz wird mit gebrauchter Zeit abgehakt, zuletzt abgehakter
+// Satz einer Übung -> antippen zum Zurücknehmen.
 function attachCircuitHandlers(card, dateKey) {
   card.querySelectorAll(".circuit-go").forEach(el => {
     el.addEventListener("click", (e) => {
       e.stopPropagation();
-      advanceSet(dateKey, parseInt(el.dataset.ex, 10));
+      startRunning(dateKey, parseInt(el.dataset.ex, 10), parseInt(el.dataset.set, 10));
+    });
+  });
+  card.querySelectorAll(".circuit-finish").forEach(el => {
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      finishRunning(dateKey, parseInt(el.dataset.ex, 10), parseInt(el.dataset.set, 10));
     });
   });
   card.querySelectorAll(".circuit-step.done").forEach(el => {
@@ -1235,9 +1280,64 @@ function retreatSet(dateKey, exIdx) {
   const data = loadJSON("trainingsplan_checks");
   if (!data[dateKey]) data[dateKey] = {};
   const cur = getSetCount(dateKey, exIdx);
-  if (cur > 0) data[dateKey][exIdx] = cur - 1;
+  if (cur > 0) {
+    data[dateKey][exIdx] = cur - 1;
+    clearSetTime(dateKey, exIdx, cur - 1);
+  }
   saveJSON("trainingsplan_checks", data);
   render();
+}
+
+// Gebrauchte Zeit je Satz speichern/lesen/löschen
+function saveSetTime(dateKey, exIdx, setIdx, seconds) {
+  const data = loadJSON("trainingsplan_settimes");
+  if (!data[dateKey]) data[dateKey] = {};
+  if (!data[dateKey][exIdx]) data[dateKey][exIdx] = {};
+  data[dateKey][exIdx][setIdx] = seconds;
+  saveJSON("trainingsplan_settimes", data);
+}
+function getSetTime(dateKey, exIdx, setIdx) {
+  const exData = (loadJSON("trainingsplan_settimes")[dateKey] || {})[exIdx] || {};
+  return typeof exData[setIdx] === "number" ? exData[setIdx] : null;
+}
+function clearSetTime(dateKey, exIdx, setIdx) {
+  const data = loadJSON("trainingsplan_settimes");
+  if (data[dateKey] && data[dateKey][exIdx]) delete data[dateKey][exIdx][setIdx];
+  saveJSON("trainingsplan_settimes", data);
+}
+function formatDuration(totalSeconds) {
+  const m = Math.floor(totalSeconds / 60), s = totalSeconds % 60;
+  return pad(m) + ":" + pad(s);
+}
+
+// Der gerade laufende Satz: bleibt im Speicher (nicht localStorage), solange die Seite offen ist.
+// So läuft die Stoppuhr weiter, auch wenn zwischendurch neu gerendert wird.
+let runningStep = null; // { dateKey, exIdx, setIdx, startedAt }
+let runningTickInterval = null;
+
+function startRunning(dateKey, exIdx, setIdx) {
+  runningStep = { dateKey, exIdx, setIdx, startedAt: Date.now() };
+  if (runningTickInterval) clearInterval(runningTickInterval);
+  runningTickInterval = setInterval(updateRunningTimerDisplay, 1000);
+  render();
+}
+function stopRunning() {
+  if (runningTickInterval) { clearInterval(runningTickInterval); runningTickInterval = null; }
+  runningStep = null;
+}
+function updateRunningTimerDisplay() {
+  if (!runningStep) return;
+  const el = document.getElementById("runningTimer");
+  if (!el) { stopRunning(); return; }
+  el.textContent = formatDuration(Math.floor((Date.now() - runningStep.startedAt) / 1000));
+}
+// Satz mit der tatsächlich gebrauchten Zeit abschließen, während "Läuft..." steht
+function finishRunning(dateKey, exIdx, setIdx) {
+  if (!runningStep) return;
+  const seconds = Math.floor((Date.now() - runningStep.startedAt) / 1000);
+  saveSetTime(dateKey, exIdx, setIdx, seconds);
+  stopRunning();
+  advanceSet(dateKey, exIdx);
 }
 function resetDay(dateKey) {
   const data = loadJSON("trainingsplan_checks");

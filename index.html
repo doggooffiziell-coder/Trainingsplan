@@ -1236,8 +1236,15 @@ let selectedIndex = (new Date().getDay() + 6) % 7; // Mon-basiert
 let activeTab = "main"; // "main" oder "warm"
 let openExDateKey = null; // Datum, für das die "Übungen anzeigen"-Liste (vergangener Tag) gerade aufgeklappt ist
 
-// Der Plan beginnt erst am nächsten Montag, nicht sofort.
-const planStartDate = getMonday(new Date());
+// Der Plan beginnt fest am 21. September 2026 (Montag) – nicht dynamisch berechnet.
+const planStartDate = new Date(2026, 8, 21);
+
+// Woche, in der der Plan startet – weiter zurück darf man nicht navigieren.
+const minWeekStart = getMonday(planStartDate);
+function getMinWeekOffset() {
+  const todayMonday = getMonday(new Date());
+  return Math.round((minWeekStart - todayMonday) / (7 * 24 * 60 * 60 * 1000));
+}
 
 function setTab(tab) { activeTab = tab; render(); }
 
@@ -1373,7 +1380,11 @@ function saveNote(dateKey, text) {
   }
 }
 
-function goPrevWeek() { weekOffset -= 1; render(); }
+function goPrevWeek() {
+  if (weekOffset - 1 < getMinWeekOffset()) return;
+  weekOffset -= 1;
+  render();
+}
 function goNextWeek() { weekOffset += 1; render(); }
 function goToday() {
   weekOffset = 0;
@@ -1404,6 +1415,14 @@ function render() {
   document.getElementById("weekRange").textContent =
     viewWeekStart.getDate() + ". – " + weekEnd.getDate() + ". " +
     weekEnd.toLocaleDateString("de-DE", { month: "long" });
+
+  const prevBtnEl = document.getElementById("prevBtn");
+  if (prevBtnEl) {
+    const atMin = weekOffset <= getMinWeekOffset();
+    prevBtnEl.disabled = atMin;
+    prevBtnEl.style.opacity = atMin ? "0.35" : "";
+    prevBtnEl.style.cursor = atMin ? "default" : "";
+  }
 
   const badge = document.getElementById("weekBadge");
   badge.classList.remove("past", "future");

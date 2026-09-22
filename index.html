@@ -514,6 +514,46 @@
       radial-gradient(ellipse at 8% -12%, rgba(61,111,214,0.14), transparent 55%),
       linear-gradient(155deg, var(--rest-stripe) 0%, var(--rest-stripe-alt) 80%);
   }
+  /* Vergangener Trainingstag, Feedback noch offen: dezente kobaltblaue Textur, signalisiert "hier fehlt noch was" */
+  .session.past.needs-feedback {
+    position: relative;
+    overflow: hidden;
+    background:
+      radial-gradient(circle 3px at 91% 14%, rgba(123,163,242,0.24), transparent 70%),
+      radial-gradient(circle 5px at 84.5% 24%, rgba(123,163,242,0.16), transparent 70%),
+      repeating-linear-gradient(135deg, rgba(123,163,242,0.032) 0px, rgba(123,163,242,0.032) 1px, transparent 1px, transparent 13px),
+      repeating-linear-gradient(45deg, rgba(0,0,0,0.16) 0px, rgba(0,0,0,0.16) 1px, transparent 1px, transparent 13px),
+      radial-gradient(ellipse at 8% -12%, rgba(61,111,214,0.12), transparent 55%),
+      linear-gradient(155deg, var(--bg-alt) 0%, var(--bg-alt-2) 85%);
+    border-color: rgba(123,163,242,0.22);
+  }
+  /* Vergangener Trainingstag, als erfolgreich markiert: grüner Grundton */
+  .session.past.status-success {
+    position: relative;
+    overflow: hidden;
+    background:
+      radial-gradient(circle 3px at 91% 14%, rgba(99,207,152,0.20), transparent 70%),
+      radial-gradient(circle 5px at 84.5% 24%, rgba(99,207,152,0.13), transparent 70%),
+      repeating-linear-gradient(135deg, rgba(99,207,152,0.028) 0px, rgba(99,207,152,0.028) 1px, transparent 1px, transparent 13px),
+      repeating-linear-gradient(45deg, rgba(0,0,0,0.16) 0px, rgba(0,0,0,0.16) 1px, transparent 1px, transparent 13px),
+      radial-gradient(ellipse at 8% -12%, rgba(47,158,107,0.11), transparent 55%),
+      linear-gradient(155deg, var(--bg-alt) 0%, var(--bg-alt-2) 85%);
+    border-color: rgba(99,207,152,0.2);
+  }
+  /* Vergangener Trainingstag, als nicht erfolgreich markiert: roter Grundton */
+  .session.past.status-fail {
+    position: relative;
+    overflow: hidden;
+    background:
+      radial-gradient(circle 3px at 91% 14%, rgba(240,149,141,0.18), transparent 70%),
+      radial-gradient(circle 5px at 84.5% 24%, rgba(240,149,141,0.12), transparent 70%),
+      repeating-linear-gradient(135deg, rgba(217,72,63,0.032) 0px, rgba(217,72,63,0.032) 1px, transparent 1px, transparent 13px),
+      repeating-linear-gradient(45deg, rgba(0,0,0,0.16) 0px, rgba(0,0,0,0.16) 1px, transparent 1px, transparent 13px),
+      radial-gradient(ellipse at 8% -12%, rgba(217,72,63,0.11), transparent 55%),
+      linear-gradient(155deg, var(--bg-alt) 0%, var(--bg-alt-2) 85%);
+    border-color: rgba(217,72,63,0.2);
+  }
+
   .session.rest::after {
     content: "";
     position: absolute;
@@ -1158,12 +1198,13 @@ function render() {
         "</div>"
       : "";
 
+    const pastStateClass = status ? " status-" + status : " needs-feedback";
     card.innerHTML =
       "<div class='session-shell'>" +
       "<div class='side-bar'>" +
       "<div class='side-fill" + (status === "success" ? " complete" : "") + (status === "fail" ? " failed" : "") + "' style='height:" + (status ? "100" : "0") + "%;'></div>" +
       "</div>" +
-      "<div class='session'>" +
+      "<div class='session past" + pastStateClass + "'>" +
       "<h2>" + titlePrefix + "</h2>" +
       "<div class='day-status-row'>" + statusRowHTML + "</div>" +
       "<div class='progress-row'><span class='progress-text'>" + doneCount + "/" + exercises.length + " Übungen &middot; " + warmDoneCount + "/" + warmup.length + " Aufwärmen</span>" +

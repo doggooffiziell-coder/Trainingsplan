@@ -1797,12 +1797,36 @@ setInterval(render, 15000);
     el.addEventListener("animationend", remove);
     setTimeout(remove, 750);
   }
-  function onPointerDown(e) {
-    const point = e.touches && e.touches[0] ? e.touches[0] : e;
-    if (typeof point.clientX !== "number") return;
-    spawnRipple(point.clientX, point.clientY, rippleVariant(e.target));
-  }
-  document.addEventListener("pointerdown", onPointerDown, { passive: true });
+
+  // Nur bei einem echten Tap/Klick auslösen, nicht beim Scrollen: wir merken uns
+  // Startposition und -element, und werfen den Effekt erst beim Loslassen –
+  // und nur, wenn sich der Finger/Cursor dabei kaum bewegt hat.
+  const MOVE_THRESHOLD = 10; // px, ab hier gilt es als Scroll/Drag statt Tap
+  let trackStartX = 0, trackStartY = 0, trackTarget = null, tracking = false, moved = false;
+
+  document.addEventListener("pointerdown", (e) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    tracking = true;
+    moved = false;
+    trackStartX = e.clientX;
+    trackStartY = e.clientY;
+    trackTarget = e.target;
+  }, { passive: true });
+
+  document.addEventListener("pointermove", (e) => {
+    if (!tracking || moved) return;
+    const dx = e.clientX - trackStartX, dy = e.clientY - trackStartY;
+    if (Math.sqrt(dx * dx + dy * dy) > MOVE_THRESHOLD) moved = true;
+  }, { passive: true });
+
+  document.addEventListener("pointerup", (e) => {
+    if (tracking && !moved) {
+      spawnRipple(e.clientX, e.clientY, rippleVariant(trackTarget || e.target));
+    }
+    tracking = false;
+  }, { passive: true });
+
+  document.addEventListener("pointercancel", () => { tracking = false; }, { passive: true });
 })();
 </script>
 

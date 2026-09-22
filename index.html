@@ -844,6 +844,39 @@
   .session.just-set { animation: cardFlash 0.7s ease-out both; }
   .notes-box.just-set { animation: feedbackSlideIn 0.4s ease-out 0.2s both; }
 
+  /* Globaler Tipp-Effekt: leuchtender Ring, der an jeder Berührungsstelle in der App aufblitzt */
+  @keyframes tapRippleAnim {
+    0% { transform: translate(-50%, -50%) scale(0); opacity: 0.9; }
+    55% { opacity: 0.55; }
+    100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+  }
+  .tap-ripple {
+    position: fixed;
+    top: 0; left: 0;
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9998;
+    background: radial-gradient(circle, rgba(123,163,242,0.55) 0%, rgba(61,111,214,0.28) 45%, transparent 72%);
+    box-shadow: 0 0 16px 2px rgba(61,111,214,0.25);
+    animation: tapRippleAnim 0.62s cubic-bezier(.22,.75,.32,1) both;
+  }
+  .tap-ripple.accent {
+    width: 60px; height: 60px;
+    background: radial-gradient(circle, rgba(123,163,242,0.65) 0%, rgba(61,111,214,0.32) 45%, transparent 72%);
+    box-shadow: 0 0 20px 3px rgba(61,111,214,0.3);
+  }
+  .tap-ripple.success {
+    width: 60px; height: 60px;
+    background: radial-gradient(circle, rgba(99,207,152,0.6) 0%, rgba(47,158,107,0.3) 45%, transparent 72%);
+    box-shadow: 0 0 20px 3px rgba(47,158,107,0.3);
+  }
+  .tap-ripple.fail {
+    width: 60px; height: 60px;
+    background: radial-gradient(circle, rgba(240,149,141,0.55) 0%, rgba(217,72,63,0.3) 45%, transparent 72%);
+    box-shadow: 0 0 20px 3px rgba(217,72,63,0.3);
+  }
+
   .ex-list-collapsed { margin-top: 4px; }
 
   .notes-box { margin-top: 20px; position: relative; }
@@ -1741,6 +1774,35 @@ setInterval(render, 15000);
   setInterval(markActiveNow, 30000);
   document.addEventListener("visibilitychange", markActiveNow);
   window.addEventListener("pagehide", markActiveNow);
+})();
+
+// Globaler Tipp-/Klick-Effekt: bei jedem Antippen der App erscheint an der
+// Berührungsstelle ein kurzer, expandierender Leucht-Ring. Die Farbe passt
+// sich an, wenn auf ein Erfolgs-/Fehler-Element oder ein Häkchen getippt wird.
+(function initTapRipple() {
+  function rippleVariant(target) {
+    if (target.closest(".status-btn.success, .status-badge.success, .check-circle.checked, .side-fill.complete")) return "success";
+    if (target.closest(".status-btn.fail, .status-badge.fail")) return "fail";
+    if (target.closest(".check-circle, button, .day, .tab, .status-btn")) return "accent";
+    return "";
+  }
+  function spawnRipple(x, y, variant) {
+    const el = document.createElement("span");
+    el.className = "tap-ripple" + (variant ? " " + variant : "");
+    el.style.left = x + "px";
+    el.style.top = y + "px";
+    document.body.appendChild(el);
+    let removed = false;
+    const remove = () => { if (!removed) { removed = true; el.remove(); } };
+    el.addEventListener("animationend", remove);
+    setTimeout(remove, 750);
+  }
+  function onPointerDown(e) {
+    const point = e.touches && e.touches[0] ? e.touches[0] : e;
+    if (typeof point.clientX !== "number") return;
+    spawnRipple(point.clientX, point.clientY, rippleVariant(e.target));
+  }
+  document.addEventListener("pointerdown", onPointerDown, { passive: true });
 })();
 </script>
 

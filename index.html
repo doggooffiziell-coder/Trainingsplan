@@ -712,6 +712,70 @@
 
   .ex-list { margin-top: 4px; }
 
+  /* Neue Übungs-Karten: pro Übung ein Kopf + eine Reihe einzeln freizuschaltender Sätze */
+  .ex-card {
+    background: linear-gradient(180deg, var(--bg-alt-2), var(--bg-alt));
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--cobalt-dim);
+    border-radius: 10px;
+    padding: 13px 14px 14px;
+    margin-bottom: 10px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.22);
+    transition: opacity 0.2s ease, border-color 0.2s ease;
+  }
+  .ex-card.done { border-left-color: var(--cobalt); opacity: 0.62; }
+  .ex-card-head { display: flex; align-items: center; gap: 11px; }
+  .ex-num-canvas { flex-shrink: 0; display: block; }
+  .ex-info { flex: 1; min-width: 0; }
+  .ex-name { font-size: 14.5px; font-weight: 700; line-height: 1.25; }
+  .ex-card.done .ex-name { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line); }
+  .ex-target {
+    font-family: "SF Mono", "Roboto Mono", "Menlo", ui-monospace, monospace;
+    font-size: 11px; color: var(--cobalt-light); margin-top: 2px; letter-spacing: 0.2px;
+  }
+  .ex-card.done .ex-target { color: var(--muted); }
+  .ex-progress {
+    flex-shrink: 0;
+    font-family: "SF Mono", "Roboto Mono", monospace;
+    font-size: 11.5px; font-weight: 700; color: var(--muted);
+    background: var(--bg); border: 1px solid var(--line-soft);
+    padding: 4px 9px; border-radius: 999px;
+    font-variant-numeric: tabular-nums;
+  }
+  .ex-progress.done { color: var(--cobalt-light); border-color: rgba(123,163,242,0.35); }
+
+  .set-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .set-pill {
+    width: 42px; height: 42px; border-radius: 10px;
+    border: 2px solid var(--line);
+    display: flex; align-items: center; justify-content: center;
+    font-family: "SF Mono", "Roboto Mono", monospace; font-size: 13.5px; font-weight: 700;
+    color: var(--muted);
+    background: var(--bg);
+    transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  }
+  .set-pill-num { opacity: 0.85; }
+  .set-pill.locked { opacity: 0.35; }
+  .set-pill.active {
+    color: var(--cobalt-light);
+    border-color: var(--cobalt-light);
+    background: var(--cobalt-dim);
+    cursor: pointer;
+    box-shadow: 0 0 0 0 rgba(123,163,242,0.45);
+    animation: setPulse 1.7s ease-in-out infinite;
+  }
+  .set-pill.active:active { transform: scale(0.88); }
+  .set-pill.done {
+    background: linear-gradient(180deg, var(--cobalt-light), var(--cobalt));
+    border-color: var(--cobalt);
+    cursor: pointer;
+  }
+  .set-pill.done:active { transform: scale(0.88); }
+  @keyframes setPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(123,163,242,0.45); }
+    50% { box-shadow: 0 0 0 6px rgba(123,163,242,0); }
+  }
+
   .progress-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
   .progress-text { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .reset-btn { font-size: 11.5px; color: var(--muted); background: none; border: none; text-decoration: underline; cursor: pointer; padding: 0; }
@@ -1025,15 +1089,64 @@ const warmup = [
   ["Lockeres Hängen an der Stange", "2 × 10–15 Sek."]
 ];
 
+// Jede Übung hat jetzt einzelne Sätze mit einer konkreten Zielzahl statt
+// nur "3 × 5–12". Die Sätze werden nacheinander freigeschaltet.
 const exercises = [
-  ["Klimmzüge", "3 × 3–8"],
-  ["Liegestütze", "3 × 5–12"],
-  ["An der niedrigen Stange hochziehen", "3 × 8–12"],
-  ["Kniebeugen", "3 × 12–15"],
-  ["Dips ausprobieren", "2 × 3–8"],
-  ["Knie im Hängen hochziehen", "2 × 5–10"],
-  ["Bauch halten (Plank)", "2 × 20–40 Sek."]
+  { name: "Klimmzüge", sets: 3, target: 5, unit: "Wdh." },
+  { name: "Liegestütze", sets: 3, target: 10, unit: "Wdh." },
+  { name: "An der niedrigen Stange hochziehen", sets: 3, target: 10, unit: "Wdh." },
+  { name: "Kniebeugen", sets: 3, target: 15, unit: "Wdh." },
+  { name: "Dips ausprobieren", sets: 2, target: 5, unit: "Wdh." },
+  { name: "Knie im Hängen hochziehen", sets: 2, target: 8, unit: "Wdh." },
+  { name: "Bauch halten (Plank)", sets: 2, target: 30, unit: "Sek." }
 ];
+
+// Baut die Karte einer Übung: Kopfzeile + Reihe von Satz-Kacheln.
+// Nur der aktuell aktive Satz (und der zuletzt erledigte, zum Zurücknehmen) ist antippbar.
+function renderExerciseCard(dateKey, i) {
+  const ex = exercises[i];
+  const cnt = getSetCount(dateKey, i);
+  const done = cnt >= ex.sets;
+  let pills = "";
+  for (let s = 0; s < ex.sets; s++) {
+    let cls = "set-pill";
+    let inner = "<span class='set-pill-num'>" + (s + 1) + "</span>";
+    if (s < cnt) {
+      cls += " done";
+      inner = "<canvas class='set-icon-canvas' width='14' height='14' data-icon='check'></canvas>";
+    } else if (s === cnt) {
+      cls += " active";
+    } else {
+      cls += " locked";
+    }
+    pills += "<div class='" + cls + "' data-ex='" + i + "' data-set='" + s + "'>" + inner + "</div>";
+  }
+  return "<div class='ex-card" + (done ? " done" : "") + "'>"
+    + "<div class='ex-card-head'>"
+    + "<canvas class='ex-num-canvas' width='26' height='26' data-icon='num' data-num='" + pad(i + 1) + "' data-done='" + (done ? 1 : 0) + "'></canvas>"
+    + "<div class='ex-info'>"
+    + "<div class='ex-name'>" + ex.name + "</div>"
+    + "<div class='ex-target'>" + ex.target + " " + ex.unit + " &middot; " + ex.sets + " Sätze</div>"
+    + "</div>"
+    + "<div class='ex-progress" + (done ? " done" : "") + "'>" + cnt + "/" + ex.sets + "</div>"
+    + "</div>"
+    + "<div class='set-row'>" + pills + "</div>"
+    + "</div>";
+}
+
+// Bindet Klicks für alle Satz-Kacheln einer gerade gerenderten Kartenliste.
+function attachExerciseHandlers(card, dateKey) {
+  card.querySelectorAll(".set-pill.active").forEach(p => {
+    p.addEventListener("click", () => advanceSet(dateKey, parseInt(p.dataset.ex, 10)));
+  });
+  card.querySelectorAll(".set-pill.done").forEach(p => {
+    p.addEventListener("click", () => {
+      const exIdx = parseInt(p.dataset.ex, 10);
+      const setIdx = parseInt(p.dataset.set, 10);
+      if (setIdx === getSetCount(dateKey, exIdx) - 1) retreatSet(dateKey, exIdx);
+    });
+  });
+}
 
 function pad(n) { return n.toString().padStart(2, "0"); }
 function isoDate(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
@@ -1067,10 +1180,33 @@ function toggleWarmupCheck(dateKey, exIdx) {
   saveJSON("trainingsplan_warmup", data);
   render();
 }
-function toggleCheck(dateKey, exIdx) {
+// Liest, wie viele Sätze einer Übung an einem Tag schon abgehakt sind.
+// (alte Daten waren noch true/false für "ganze Übung erledigt" – bleiben kompatibel)
+function getSetCount(dateKey, exIdx) {
+  const checks = loadJSON("trainingsplan_checks")[dateKey] || {};
+  const val = checks[exIdx];
+  if (typeof val === "number") return val;
+  return val ? exercises[exIdx].sets : 0;
+}
+function isExerciseDone(dateKey, exIdx) {
+  return getSetCount(dateKey, exIdx) >= exercises[exIdx].sets;
+}
+// Nächsten Satz abhaken (rückt die Übung einen Satz weiter vor)
+function advanceSet(dateKey, exIdx) {
   const data = loadJSON("trainingsplan_checks");
   if (!data[dateKey]) data[dateKey] = {};
-  data[dateKey][exIdx] = !data[dateKey][exIdx];
+  const cur = getSetCount(dateKey, exIdx);
+  const total = exercises[exIdx].sets;
+  if (cur < total) data[dateKey][exIdx] = cur + 1;
+  saveJSON("trainingsplan_checks", data);
+  render();
+}
+// Letzten abgehakten Satz zurücknehmen (nur der zuletzt erledigte Satz ist antippbar)
+function retreatSet(dateKey, exIdx) {
+  const data = loadJSON("trainingsplan_checks");
+  if (!data[dateKey]) data[dateKey] = {};
+  const cur = getSetCount(dateKey, exIdx);
+  if (cur > 0) data[dateKey][exIdx] = cur - 1;
   saveJSON("trainingsplan_checks", data);
   render();
 }
@@ -1227,18 +1363,11 @@ function render() {
     const justSubmitted = justSubmittedStatusKey === dateKey;
     justSubmittedStatusKey = null;
 
-    const checks = loadJSON("trainingsplan_checks")[dateKey] || {};
     let doneCount = 0;
     let rows = "";
-    exercises.forEach((e, i) => {
-      const isDone = !!checks[i];
-      if (isDone) doneCount++;
-      rows += "<div class='task-card main-card" + (isDone ? " done" : "") + "'>"
-        + "<span class='badge-num'>" + pad(i + 1) + "</span>"
-        + "<span class='name'>" + e[0] + "</span>"
-        + "<span class='reps main-reps'>" + e[1] + "</span>"
-        + "<span class='check-circle main-check" + (isDone ? " checked" : "") + "' data-i='" + i + "'>&#10003;</span>"
-        + "</div>";
+    exercises.forEach((ex, i) => {
+      if (isExerciseDone(dateKey, i)) doneCount++;
+      rows += renderExerciseCard(dateKey, i);
     });
 
     const warmupChecks = loadJSON("trainingsplan_warmup")[dateKey] || {};
@@ -1308,9 +1437,7 @@ function render() {
         toggleExBtn.textContent = hidden ? "Übungen ausblenden" : "Übungen anzeigen";
       });
     }
-    card.querySelectorAll(".check-circle[data-i]").forEach(box => {
-      box.addEventListener("click", () => toggleCheck(dateKey, box.dataset.i));
-    });
+    attachExerciseHandlers(card, dateKey);
     card.querySelectorAll(".check-circle[data-wi]").forEach(box => {
       box.addEventListener("click", () => toggleWarmupCheck(dateKey, box.dataset.wi));
     });
@@ -1370,17 +1497,10 @@ function render() {
   const durationMin = (endHour * 60 + endMin) - (startHour * 60 + startMin);
 
   let rows = "";
-  const checks = loadJSON("trainingsplan_checks")[dateKey] || {};
   let doneCount = 0;
-  exercises.forEach((e, i) => {
-    const isDone = !!checks[i];
-    if (isDone) doneCount++;
-    rows += "<div class='task-card main-card" + (isDone ? " done" : "") + "'>"
-      + "<span class='badge-num'>" + pad(i + 1) + "</span>"
-      + "<span class='name'>" + e[0] + "</span>"
-      + "<span class='reps main-reps'>" + e[1] + "</span>"
-      + "<span class='check-circle main-check" + (isDone ? " checked" : "") + "' data-i='" + i + "'>&#10003;</span>"
-      + "</div>";
+  exercises.forEach((ex, i) => {
+    if (isExerciseDone(dateKey, i)) doneCount++;
+    rows += renderExerciseCard(dateKey, i);
   });
 
   let warmupRows = "";
@@ -1434,9 +1554,7 @@ function render() {
     notesHTML +
     "</div></div>";
 
-  card.querySelectorAll(".check-circle[data-i]").forEach(box => {
-    box.addEventListener("click", () => toggleCheck(dateKey, box.dataset.i));
-  });
+  attachExerciseHandlers(card, dateKey);
   card.querySelectorAll(".check-circle[data-wi]").forEach(box => {
     box.addEventListener("click", () => toggleWarmupCheck(dateKey, box.dataset.wi));
   });
@@ -1457,20 +1575,49 @@ function render() {
   drawBadgeIcons();
 }
 
-// Zeichnet kleine Icons (z.B. den Blitz für Aufwärmübungen) per Canvas statt Emoji
+// Zeichnet kleine Icons (Blitz, Satz-Haken, Übungs-Nummer) per Canvas statt Emoji
 function drawBadgeIcons() {
-  document.querySelectorAll(".badge-icon-canvas").forEach(canvas => {
+  document.querySelectorAll("canvas[data-icon]").forEach(canvas => {
     const icon = canvas.dataset.icon;
     const ctx = canvas.getContext("2d");
     const dpr = Math.max(window.devicePixelRatio || 1, 2);
-    const size = 16;
+    const size = parseInt(canvas.getAttribute("width"), 10) || 16;
     canvas.width = size * dpr;
     canvas.height = size * dpr;
     canvas.style.width = size + "px";
     canvas.style.height = size + "px";
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, size, size);
-    if (icon === "bolt") {
+    if (icon === "check") {
+      ctx.strokeStyle = "#f2f6ff";
+      ctx.lineWidth = size * 0.16;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.beginPath();
+      ctx.moveTo(size * 0.18, size * 0.52);
+      ctx.lineTo(size * 0.42, size * 0.78);
+      ctx.lineTo(size * 0.86, size * 0.22);
+      ctx.stroke();
+    } else if (icon === "num") {
+      const num = canvas.dataset.num;
+      const done = canvas.dataset.done === "1";
+      const cx = size / 2, cy = size / 2, r = size / 2 - 1;
+      const grad = ctx.createLinearGradient(0, 0, 0, size);
+      if (done) { grad.addColorStop(0, "#7ba3f2"); grad.addColorStop(1, "#3d6fd6"); }
+      else { grad.addColorStop(0, "#182034"); grad.addColorStop(1, "#0f1626"); }
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = done ? "rgba(10,16,28,0.4)" : "rgba(123,163,242,0.4)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.fillStyle = done ? "#0a1018" : "#7ba3f2";
+      ctx.font = "700 " + Math.round(size * 0.4) + "px 'SF Mono', 'Roboto Mono', monospace";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(num, cx, cy + size * 0.03);
+    } else if (icon === "bolt") {
       const grad = ctx.createLinearGradient(0, 0, 0, size);
       grad.addColorStop(0, "#a8c2f5");
       grad.addColorStop(1, "#4d78d9");
@@ -1648,7 +1795,11 @@ setInterval(render, 15000);
     const checks = loadJSON("trainingsplan_checks")[dateKey] || {};
     const warm = loadJSON("trainingsplan_warmup")[dateKey] || {};
     let doneMain = 0, doneWarm = 0;
-    exercises.forEach((_, i) => { if (checks[i]) doneMain++; });
+    exercises.forEach((ex, i) => {
+      const val = checks[i];
+      const cnt = typeof val === "number" ? val : (val ? ex.sets : 0);
+      if (cnt >= ex.sets) doneMain++;
+    });
     warmup.forEach((_, i) => { if (warm[i]) doneWarm++; });
     return doneMain === exercises.length && doneWarm === warmup.length;
   }

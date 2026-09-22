@@ -808,6 +808,42 @@
   .status-badge.success { background: rgba(47,158,107,0.16); color: var(--green-light); border: 1px solid rgba(99,207,152,0.35); }
   .status-badge.fail { background: rgba(217,72,63,0.16); color: #f0958d; border: 1px solid rgba(217,72,63,0.35); }
 
+  /* Animation beim Abgeben des Tagesfeedbacks */
+  @keyframes statusPopIn {
+    0% { opacity: 0; transform: scale(0.7) translateY(5px); }
+    60% { opacity: 1; transform: scale(1.08) translateY(0); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  @keyframes glowPulseSuccess {
+    0% { box-shadow: 0 0 0 0 rgba(99,207,152,0.55); }
+    100% { box-shadow: 0 0 0 18px rgba(99,207,152,0); }
+  }
+  @keyframes glowPulseFail {
+    0% { box-shadow: 0 0 0 0 rgba(217,72,63,0.5); }
+    100% { box-shadow: 0 0 0 18px rgba(217,72,63,0); }
+  }
+  @keyframes fillGrow {
+    from { height: 0%; }
+    to { height: 100%; }
+  }
+  @keyframes cardFlash {
+    0% { filter: brightness(1); }
+    30% { filter: brightness(1.28); }
+    100% { filter: brightness(1); }
+  }
+  @keyframes feedbackSlideIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .status-badge.just-set {
+    animation: statusPopIn 0.45s cubic-bezier(.34,1.56,.64,1) both;
+  }
+  .status-badge.just-set.success { animation: statusPopIn 0.45s cubic-bezier(.34,1.56,.64,1) both, glowPulseSuccess 0.9s ease-out 0.15s both; }
+  .status-badge.just-set.fail { animation: statusPopIn 0.45s cubic-bezier(.34,1.56,.64,1) both, glowPulseFail 0.9s ease-out 0.15s both; }
+  .side-fill.just-set { animation: fillGrow 0.7s cubic-bezier(.22,.9,.32,1) both; }
+  .session.just-set { animation: cardFlash 0.7s ease-out both; }
+  .notes-box.just-set { animation: feedbackSlideIn 0.4s ease-out 0.2s both; }
+
   .ex-list-collapsed { margin-top: 4px; }
 
   .notes-box { margin-top: 20px; position: relative; }
@@ -978,6 +1014,7 @@ function sameDate(a, b) { return isoDate(a) === isoDate(b); }
 let weekOffset = 0;
 let selectedIndex = (new Date().getDay() + 6) % 7; // Mon-basiert
 let activeTab = "main"; // "main" oder "warm"
+let openExDateKey = null; // Datum, für das die "Übungen anzeigen"-Liste (vergangener Tag) gerade aufgeklappt ist
 
 // Der Plan beginnt erst am nächsten Montag, nicht sofort.
 const planStartDate = getMonday(new Date());
@@ -1016,11 +1053,13 @@ function resetWarmupDay(dateKey) {
   saveJSON("trainingsplan_warmup", data);
   render();
 }
+let justSubmittedStatusKey = null;
 function setDayStatus(dateKey, status) {
   const data = loadJSON("trainingsplan_status");
   if (status === null) delete data[dateKey];
   else data[dateKey] = status;
   saveJSON("trainingsplan_status", data);
+  justSubmittedStatusKey = status ? dateKey : null;
   render();
 }
 let saveTimer = null;
@@ -1152,6 +1191,8 @@ function render() {
   const isPastDay = selectedDate < realToday;
   if (isPastDay) {
     const status = loadJSON("trainingsplan_status")[dateKey] || null;
+    const justSubmitted = justSubmittedStatusKey === dateKey;
+    justSubmittedStatusKey = null;
 
     const checks = loadJSON("trainingsplan_checks")[dateKey] || {};
     let doneCount = 0;
@@ -1182,7 +1223,7 @@ function render() {
     });
 
     const statusRowHTML = status
-      ? "<div class='status-badge " + status + "'>" + (status === "success" ? "&#10003; Erfolgreich" : "&#10007; Nicht erfolgreich") + "</div>" +
+      ? "<div class='status-badge " + status + (justSubmitted ? " just-set" : "") + "'>" + (status === "success" ? "&#10003; Erfolgreich" : "&#10007; Nicht erfolgreich") + "</div>" +
         "<button class='change-time-btn' id='changeStatusBtn'>Ändern</button>"
       : "<div class='status-label'>Wie lief das Training?</div>" +
         "<div class='status-btns'>" +
@@ -1191,7 +1232,7 @@ function render() {
         "</div>";
 
     const feedbackHTML = status
-      ? "<div class='notes-box'>" +
+      ? "<div class='notes-box" + (justSubmitted ? " just-set" : "") + "'>" +
         "<label>Feedback für " + titlePrefix.toLowerCase() + "</label>" +
         "<textarea id='noteInput' placeholder='Wie ist es gelaufen? Was war gut, was schwer?'>" + noteText.replace(/</g, "&lt;") + "</textarea>" +
         "<div class='save-tag' id='saveTag'>Gespeichert</div>" +
@@ -1202,14 +1243,14 @@ function render() {
     card.innerHTML =
       "<div class='session-shell'>" +
       "<div class='side-bar'>" +
-      "<div class='side-fill" + (status === "success" ? " complete" : "") + (status === "fail" ? " failed" : "") + "' style='height:" + (status ? "100" : "0") + "%;'></div>" +
+      "<div class='side-fill" + (status === "success" ? " complete" : "") + (status === "fail" ? " failed" : "") + (justSubmitted ? " just-set" : "") + "' style='height:" + (status ? "100" : "0") + "%;'></div>" +
       "</div>" +
-      "<div class='session past" + pastStateClass + "'>" +
+      "<div class='session past" + pastStateClass + (justSubmitted ? " just-set" : "") + "'>" +
       "<h2>" + titlePrefix + "</h2>" +
       "<div class='day-status-row'>" + statusRowHTML + "</div>" +
       "<div class='progress-row'><span class='progress-text'>" + doneCount + "/" + exercises.length + " Übungen &middot; " + warmDoneCount + "/" + warmup.length + " Aufwärmen</span>" +
-      "<button class='reset-btn' id='toggleExBtn'>Übungen anzeigen</button></div>" +
-      "<div class='ex-list-collapsed' id='exListPast' style='display:none;'>" +
+      "<button class='reset-btn' id='toggleExBtn'>" + (openExDateKey === dateKey ? "Übungen ausblenden" : "Übungen anzeigen") + "</button></div>" +
+      "<div class='ex-list-collapsed' id='exListPast' style='display:" + (openExDateKey === dateKey ? "block" : "none") + ";'>" +
       "<div class='main-head'>Übungen</div>" +
       "<div class='ex-list'>" + rows + "</div>" +
       "<div class='warmup-head' style='margin-top:16px;'><span class='icon'>&#9889;</span> Aufwärmen</div>" +
@@ -1228,6 +1269,7 @@ function render() {
     const exListPast = document.getElementById("exListPast");
     if (toggleExBtn && exListPast) {
       toggleExBtn.addEventListener("click", () => {
+        openExDateKey = (openExDateKey === dateKey) ? null : dateKey;
         const hidden = exListPast.style.display === "none";
         exListPast.style.display = hidden ? "block" : "none";
         toggleExBtn.textContent = hidden ? "Übungen ausblenden" : "Übungen anzeigen";

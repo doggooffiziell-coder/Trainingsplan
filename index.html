@@ -712,68 +712,72 @@
 
   .ex-list { margin-top: 4px; }
 
-  /* Neue Übungs-Karten: pro Übung ein Kopf + eine Reihe einzeln freizuschaltender Sätze */
-  .ex-card {
+  /* Zirkel-Ablauf: eine fortlaufende Liste einzelner Sätze, Übungen wechseln sich ab,
+     dazwischen steht die Pause. So werden nie mehrere Sätze derselben Übung direkt hintereinander gemacht. */
+  .circuit-round-label {
+    font-size: 10.5px; font-weight: 800; letter-spacing: 1.1px; text-transform: uppercase;
+    color: var(--steel); margin: 16px 0 8px; padding-left: 2px;
+  }
+  .circuit-round-label:first-child { margin-top: 2px; }
+
+  .circuit-step {
+    display: flex; align-items: center; gap: 12px;
     background: linear-gradient(180deg, var(--bg-alt-2), var(--bg-alt));
     border: 1px solid var(--line);
     border-left: 3px solid var(--cobalt-dim);
     border-radius: 10px;
-    padding: 13px 14px 14px;
-    margin-bottom: 10px;
+    padding: 11px 12px;
     box-shadow: 0 3px 10px rgba(0,0,0,0.22);
     transition: opacity 0.2s ease, border-color 0.2s ease;
   }
-  .ex-card.done { border-left-color: var(--cobalt); opacity: 0.62; }
-  .ex-card-head { display: flex; align-items: center; gap: 11px; }
-  .ex-num-canvas { flex-shrink: 0; display: block; }
-  .ex-info { flex: 1; min-width: 0; }
-  .ex-name { font-size: 14.5px; font-weight: 700; line-height: 1.25; }
-  .ex-card.done .ex-name { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line); }
-  .ex-target {
+  .circuit-step.locked { opacity: 0.4; }
+  .circuit-step.done { opacity: 0.58; border-left-color: var(--cobalt); }
+  .circuit-step.active { border-left-color: var(--cobalt-light); }
+  .circuit-num-canvas { flex-shrink: 0; display: block; }
+  .circuit-info { flex: 1; min-width: 0; }
+  .circuit-name { font-size: 14px; font-weight: 700; line-height: 1.25; }
+  .circuit-step.done .circuit-name { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line); }
+  .circuit-target {
     font-family: "SF Mono", "Roboto Mono", "Menlo", ui-monospace, monospace;
     font-size: 11px; color: var(--cobalt-light); margin-top: 2px; letter-spacing: 0.2px;
   }
-  .ex-card.done .ex-target { color: var(--muted); }
-  .ex-progress {
+  .circuit-step.done .circuit-target, .circuit-step.locked .circuit-target { color: var(--muted); }
+  .circuit-go {
     flex-shrink: 0;
-    font-family: "SF Mono", "Roboto Mono", monospace;
-    font-size: 11.5px; font-weight: 700; color: var(--muted);
-    background: var(--bg); border: 1px solid var(--line-soft);
-    padding: 4px 9px; border-radius: 999px;
-    font-variant-numeric: tabular-nums;
-  }
-  .ex-progress.done { color: var(--cobalt-light); border-color: rgba(123,163,242,0.35); }
-
-  .set-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
-  .set-pill {
-    width: 42px; height: 42px; border-radius: 10px;
-    border: 2px solid var(--line);
-    display: flex; align-items: center; justify-content: center;
-    font-family: "SF Mono", "Roboto Mono", monospace; font-size: 13.5px; font-weight: 700;
-    color: var(--muted);
-    background: var(--bg);
-    transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
-  }
-  .set-pill-num { opacity: 0.85; }
-  .set-pill.locked { opacity: 0.35; }
-  .set-pill.active {
-    color: var(--cobalt-light);
-    border-color: var(--cobalt-light);
-    background: var(--cobalt-dim);
+    font-size: 12px; font-weight: 800; color: #f2f6ff;
+    background: var(--cobalt);
+    padding: 8px 14px; border-radius: 999px;
     cursor: pointer;
-    box-shadow: 0 0 0 0 rgba(123,163,242,0.45);
+    box-shadow: 0 0 0 0 rgba(123,163,242,0.5);
     animation: setPulse 1.7s ease-in-out infinite;
   }
-  .set-pill.active:active { transform: scale(0.88); }
-  .set-pill.done {
-    background: linear-gradient(180deg, var(--cobalt-light), var(--cobalt));
-    border-color: var(--cobalt);
-    cursor: pointer;
-  }
-  .set-pill.done:active { transform: scale(0.88); }
+  .circuit-go:active { transform: scale(0.92); }
+  .circuit-step.done .circuit-info { cursor: pointer; }
   @keyframes setPulse {
     0%, 100% { box-shadow: 0 0 0 0 rgba(123,163,242,0.45); }
     50% { box-shadow: 0 0 0 6px rgba(123,163,242,0); }
+  }
+
+  .circuit-rest {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 11px; font-weight: 700; color: var(--muted);
+    letter-spacing: 0.3px;
+    padding: 8px 4px 8px 24px;
+    position: relative;
+  }
+  .circuit-rest::before {
+    content: "";
+    position: absolute;
+    left: 12px; top: 0; bottom: 0;
+    width: 1px;
+    background: repeating-linear-gradient(180deg, var(--line) 0px, var(--line) 3px, transparent 3px, transparent 6px);
+  }
+  .circuit-rest .rest-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--steel);
+    flex-shrink: 0;
+    box-shadow: 0 0 6px 1px rgba(127,146,179,0.5);
+    position: relative; left: 6px;
   }
 
   .progress-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
@@ -1101,48 +1105,73 @@ const exercises = [
   { name: "Bauch halten (Plank)", sets: 2, target: 30, unit: "Sek." }
 ];
 
-// Baut die Karte einer Übung: Kopfzeile + Reihe von Satz-Kacheln.
-// Nur der aktuell aktive Satz (und der zuletzt erledigte, zum Zurücknehmen) ist antippbar.
-function renderExerciseCard(dateKey, i) {
-  const ex = exercises[i];
-  const cnt = getSetCount(dateKey, i);
-  const done = cnt >= ex.sets;
-  let pills = "";
-  for (let s = 0; s < ex.sets; s++) {
-    let cls = "set-pill";
-    let inner = "<span class='set-pill-num'>" + (s + 1) + "</span>";
-    if (s < cnt) {
-      cls += " done";
-      inner = "<canvas class='set-icon-canvas' width='14' height='14' data-icon='check'></canvas>";
-    } else if (s === cnt) {
-      cls += " active";
-    } else {
-      cls += " locked";
-    }
-    pills += "<div class='" + cls + "' data-ex='" + i + "' data-set='" + s + "'>" + inner + "</div>";
+// Pause zwischen jeder Übung im Zirkel (Sekunden)
+const CIRCUIT_REST_SECONDS = 60;
+
+// Baut die Reihenfolge im Zirkel-Prinzip: erst ein Satz jeder Übung (Runde 1),
+// dann erst der zweite Satz jeder Übung (Runde 2) usw. So kommen nie zwei
+// Sätze derselben Übung direkt hintereinander.
+function buildCircuitSequence() {
+  const maxSets = Math.max(...exercises.map(ex => ex.sets));
+  const seq = [];
+  for (let r = 0; r < maxSets; r++) {
+    exercises.forEach((ex, i) => {
+      if (ex.sets > r) seq.push({ exIdx: i, setIdx: r, round: r });
+    });
   }
-  return "<div class='ex-card" + (done ? " done" : "") + "'>"
-    + "<div class='ex-card-head'>"
-    + "<canvas class='ex-num-canvas' width='26' height='26' data-icon='num' data-num='" + pad(i + 1) + "' data-done='" + (done ? 1 : 0) + "'></canvas>"
-    + "<div class='ex-info'>"
-    + "<div class='ex-name'>" + ex.name + "</div>"
-    + "<div class='ex-target'>" + ex.target + " " + ex.unit + " &middot; " + ex.sets + " Sätze</div>"
-    + "</div>"
-    + "<div class='ex-progress" + (done ? " done" : "") + "'>" + cnt + "/" + ex.sets + "</div>"
-    + "</div>"
-    + "<div class='set-row'>" + pills + "</div>"
-    + "</div>";
+  return seq;
+}
+const circuitSequence = buildCircuitSequence();
+
+// Rendert den kompletten Zirkel für einen Tag als fortlaufende Liste:
+// Satz einer Übung -> Pause -> Satz der nächsten Übung -> Pause -> ...
+// gruppiert nach Runden. Nur der jeweils nächste offene Satz ist antippbar.
+function renderCircuit(dateKey) {
+  const cnts = exercises.map((_, i) => getSetCount(dateKey, i));
+  let activeFound = false;
+  let lastRound = -1;
+  let html = "<div class='circuit-list'>";
+  circuitSequence.forEach((step, idx) => {
+    if (step.round !== lastRound) {
+      html += "<div class='circuit-round-label'>Runde " + (step.round + 1) + "</div>";
+      lastRound = step.round;
+    }
+    const ex = exercises[step.exIdx];
+    const done = cnts[step.exIdx] > step.setIdx;
+    let status = "locked";
+    if (done) status = "done";
+    else if (!activeFound) { status = "active"; activeFound = true; }
+
+    html += "<div class='circuit-step " + status + "' data-ex='" + step.exIdx + "' data-set='" + step.setIdx + "'>"
+      + "<canvas class='circuit-num-canvas' width='26' height='26' data-icon='num' data-num='" + (step.setIdx + 1) + "' data-done='" + (done ? 1 : 0) + "'></canvas>"
+      + "<div class='circuit-info'>"
+      + "<div class='circuit-name'>" + ex.name + "</div>"
+      + "<div class='circuit-target'>Satz " + (step.setIdx + 1) + "/" + ex.sets + " &middot; " + ex.target + " " + ex.unit + "</div>"
+      + "</div>"
+      + (status === "active" ? "<div class='circuit-go' data-ex='" + step.exIdx + "'>Los</div>" : "")
+      + "</div>";
+
+    if (idx < circuitSequence.length - 1) {
+      html += "<div class='circuit-rest'><span class='rest-dot'></span>" + CIRCUIT_REST_SECONDS + " Sek. Pause &middot; " + exercises[circuitSequence[idx + 1].exIdx].name + "</div>";
+    }
+  });
+  html += "</div>";
+  return html;
 }
 
-// Bindet Klicks für alle Satz-Kacheln einer gerade gerenderten Kartenliste.
-function attachExerciseHandlers(card, dateKey) {
-  card.querySelectorAll(".set-pill.active").forEach(p => {
-    p.addEventListener("click", () => advanceSet(dateKey, parseInt(p.dataset.ex, 10)));
+// Bindet Klicks für den gerade gerenderten Zirkel: aktiver Satz -> abhaken,
+// zuletzt abgehakter Satz einer Übung -> antippen zum Zurücknehmen.
+function attachCircuitHandlers(card, dateKey) {
+  card.querySelectorAll(".circuit-go").forEach(el => {
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      advanceSet(dateKey, parseInt(el.dataset.ex, 10));
+    });
   });
-  card.querySelectorAll(".set-pill.done").forEach(p => {
-    p.addEventListener("click", () => {
-      const exIdx = parseInt(p.dataset.ex, 10);
-      const setIdx = parseInt(p.dataset.set, 10);
+  card.querySelectorAll(".circuit-step.done").forEach(el => {
+    el.addEventListener("click", () => {
+      const exIdx = parseInt(el.dataset.ex, 10);
+      const setIdx = parseInt(el.dataset.set, 10);
       if (setIdx === getSetCount(dateKey, exIdx) - 1) retreatSet(dateKey, exIdx);
     });
   });
@@ -1363,12 +1392,9 @@ function render() {
     const justSubmitted = justSubmittedStatusKey === dateKey;
     justSubmittedStatusKey = null;
 
-    let doneCount = 0;
-    let rows = "";
-    exercises.forEach((ex, i) => {
-      if (isExerciseDone(dateKey, i)) doneCount++;
-      rows += renderExerciseCard(dateKey, i);
-    });
+    let doneSets = 0, totalSets = 0;
+    exercises.forEach((ex, i) => { totalSets += ex.sets; doneSets += getSetCount(dateKey, i); });
+    const rows = renderCircuit(dateKey);
 
     const warmupChecks = loadJSON("trainingsplan_warmup")[dateKey] || {};
     let warmDoneCount = 0;
@@ -1410,7 +1436,7 @@ function render() {
       "<div class='session past" + pastStateClass + (justSubmitted ? " just-set" : "") + "'>" +
       "<h2>" + titlePrefix + "</h2>" +
       "<div class='day-status-row'>" + statusRowHTML + "</div>" +
-      "<div class='progress-row'><span class='progress-text'>" + doneCount + "/" + exercises.length + " Übungen &middot; " + warmDoneCount + "/" + warmup.length + " Aufwärmen</span>" +
+      "<div class='progress-row'><span class='progress-text'>" + doneSets + "/" + totalSets + " Sätze &middot; " + warmDoneCount + "/" + warmup.length + " Aufwärmen</span>" +
       "<button class='reset-btn' id='toggleExBtn'>" + (openExDateKey === dateKey ? "Übungen ausblenden" : "Übungen anzeigen") + "</button></div>" +
       "<div class='ex-list-collapsed' id='exListPast' style='display:" + (openExDateKey === dateKey ? "block" : "none") + ";'>" +
       "<div class='main-head'>Übungen</div>" +
@@ -1437,7 +1463,7 @@ function render() {
         toggleExBtn.textContent = hidden ? "Übungen ausblenden" : "Übungen anzeigen";
       });
     }
-    attachExerciseHandlers(card, dateKey);
+    attachCircuitHandlers(card, dateKey);
     card.querySelectorAll(".check-circle[data-wi]").forEach(box => {
       box.addEventListener("click", () => toggleWarmupCheck(dateKey, box.dataset.wi));
     });
@@ -1496,12 +1522,9 @@ function render() {
 
   const durationMin = (endHour * 60 + endMin) - (startHour * 60 + startMin);
 
-  let rows = "";
-  let doneCount = 0;
-  exercises.forEach((ex, i) => {
-    if (isExerciseDone(dateKey, i)) doneCount++;
-    rows += renderExerciseCard(dateKey, i);
-  });
+  let doneSets = 0, totalSets = 0;
+  exercises.forEach((ex, i) => { totalSets += ex.sets; doneSets += getSetCount(dateKey, i); });
+  const rows = renderCircuit(dateKey);
 
   let warmupRows = "";
   const warmupChecks = loadJSON("trainingsplan_warmup")[dateKey] || {};
@@ -1521,7 +1544,7 @@ function render() {
   const tabsHTML =
     "<div class='tab-switch'>" +
     "<button class='tab-btn warm-tab" + (!isMainTab ? " active" : "") + "' id='warmTabBtn'>Aufwärmen (" + warmDoneCount + "/" + warmup.length + ")</button>" +
-    "<button class='tab-btn main-tab" + (isMainTab ? " active" : "") + "' id='mainTabBtn'>Übungen (" + doneCount + "/" + exercises.length + ")</button>" +
+    "<button class='tab-btn main-tab" + (isMainTab ? " active" : "") + "' id='mainTabBtn'>Übungen (" + doneSets + "/" + totalSets + ")</button>" +
     "</div>";
 
   const listHTML = isMainTab
@@ -1546,15 +1569,15 @@ function render() {
     "</div>" +
     "<div class='pause-hint'>inkl. kurzer Pause zwischen Aufwärmen und Übungen &middot; <button class='change-time-btn' id='changeTimeBtn'>Zeit ändern</button></div>" +
     (inSlot ? "<div class='now-tag'>Training läuft gerade &middot; Balken links füllt sich</div>" : "") +
-    (isPastSession && doneCount < exercises.length ? "<div class='done-hint'>Zeit vorbei &middot; nicht vergessen abzuhaken</div>" : "") +
-    "<div class='progress-row'><span class='progress-text'>" + (isMainTab ? doneCount + " von " + exercises.length : warmDoneCount + " von " + warmup.length) + " erledigt</span>" +
+    (isPastSession && doneSets < totalSets ? "<div class='done-hint'>Zeit vorbei &middot; nicht vergessen abzuhaken</div>" : "") +
+    "<div class='progress-row'><span class='progress-text'>" + (isMainTab ? doneSets + " von " + totalSets + " Sätzen" : warmDoneCount + " von " + warmup.length) + " erledigt</span>" +
     "<button class='reset-btn' id='resetBtn'>" + resetLabel + "</button></div>" +
     tabsHTML +
     listHTML +
     notesHTML +
     "</div></div>";
 
-  attachExerciseHandlers(card, dateKey);
+  attachCircuitHandlers(card, dateKey);
   card.querySelectorAll(".check-circle[data-wi]").forEach(box => {
     box.addEventListener("click", () => toggleWarmupCheck(dateKey, box.dataset.wi));
   });

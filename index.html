@@ -579,6 +579,53 @@
     text-decoration: underline; cursor: pointer; padding: 0; font-weight: 600;
   }
 
+  .move-row { margin-bottom: 14px; font-size: 12.5px; color: var(--steel); }
+  .move-row.moved-away, .move-row.moved-here {
+    background: var(--cobalt-dim);
+    border: 1px solid rgba(226,152,95,0.25);
+    border-radius: 5px;
+    padding: 10px 12px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 10px;
+  }
+  .move-row.moved-away b, .move-row.moved-here b { color: var(--cobalt-light); }
+  .move-toggle-btn {
+    font-size: 11.5px; color: var(--cobalt-light); background: none; border: none;
+    text-decoration: underline; cursor: pointer; padding: 0; font-weight: 600;
+  }
+  .move-undo-btn {
+    font-size: 11px; color: var(--steel); background: var(--bg-alt-2); border: 1px solid var(--line);
+    border-radius: 4px; cursor: pointer; padding: 5px 9px; font-family: inherit; font-weight: 600;
+  }
+  .move-picker { display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .move-picker input[type="date"] {
+    background: var(--bg-alt);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 600;
+    padding: 8px 9px;
+    font-family: inherit;
+  }
+  .move-picker input[type="date"]:focus { outline: none; border-color: var(--cobalt); }
+  .move-picker button {
+    background: var(--cobalt);
+    color: #faf3e6;
+    border: 1px solid #cf7a3a;
+    border-top-color: #e0965c;
+    border-bottom-color: #8a4620;
+    font-size: 12.5px;
+    font-weight: 700;
+    padding: 8px 13px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .move-picker button:active { transform: translateY(1px); }
+
   .time-gate {
     background: var(--bg);
     border: 1px solid var(--line);
@@ -848,6 +895,7 @@
   .day.status-success.train { border-bottom-color: var(--green); }
   .day.status-fail .dot { background: var(--red); }
   .day.status-fail.train { border-bottom-color: var(--red); }
+  .day.day-moved .dot { box-shadow: 0 0 0 2px rgba(226,152,95,0.55); }
 
   .side-fill.failed { background: linear-gradient(180deg, #cf7b5c, var(--red)); }
 
@@ -1254,6 +1302,32 @@ function loadJSON(key) {
 function saveJSON(key, data) {
   try { localStorage.setItem(key, JSON.stringify(data)); } catch (e) {}
 }
+
+// Verlegte Trainingstage: Mapping Ursprungs-Datum -> Ziel-Datum (beides als "YYYY-MM-DD").
+// Ein Trainingstag lässt sich so auf einen anderen Tag vor- oder nachlegen, ohne den
+// eigentlichen Wochenplan (Mo/Mi/Fr) dauerhaft zu ändern.
+function loadMoves() { return loadJSON("trainingsplan_moves"); }
+function saveMoves(m) { saveJSON("trainingsplan_moves", m); }
+function getMoveSourceFromMoves(moves, key) {
+  for (const k in moves) { if (moves[k] === key) return k; }
+  return null;
+}
+// Ob ein bestimmtes Datum effektiv ein Trainingstag ist – berücksichtigt sowohl den
+// festen Wochenrhythmus als auch etwaige Verlegungen.
+function isEffectiveTrainDay(d) {
+  const key = isoDate(d);
+  const idx = (d.getDay() + 6) % 7;
+  const baseTrain = trainingDaysMon.includes(idx);
+  const moves = loadMoves();
+  if (moves[key]) return false; // an diesem Tag wurde das Training woanders hin verlegt
+  if (baseTrain) return true;
+  return !!getMoveSourceFromMoves(moves, key);
+}
+function formatDateLabel(dateKeyStr) {
+  const parts = dateKeyStr.split("-").map(Number);
+  const d = new Date(parts[0], parts[1] - 1, parts[2]);
+  return d.toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" });
+}
 function toggleWarmupCheck(dateKey, exIdx) {
   const data = loadJSON("trainingsplan_warmup");
   if (!data[dateKey]) data[dateKey] = {};
@@ -1367,6 +1441,27 @@ function setDayStatus(dateKey, status) {
   justSubmittedStatusKey = status ? dateKey : null;
   render();
 }
+// Verlegt das Training von sourceKey auf targetKey. Schlägt fehl (mit Hinweis), wenn am
+// Zieltag bereits Training stattfindet.
+function moveTrainingDay(sourceKey, targetKey) {
+  if (!targetKey || targetKey === sourceKey) return;
+  const tParts = targetKey.split("-").map(Number);
+  const tDate = new Date(tParts[0], tParts[1] - 1, tParts[2]);
+  if (isEffectiveTrainDay(tDate)) {
+    alert("An diesem Tag ist bereits Training geplant. Bitte einen anderen Tag wählen.");
+    return;
+  }
+  const moves = loadMoves();
+  moves[sourceKey] = targetKey;
+  saveMoves(moves);
+  render();
+}
+function undoMove(sourceKey) {
+  const moves = loadMoves();
+  delete moves[sourceKey];
+  saveMoves(moves);
+  render();
+}
 let saveTimer = null;
 function saveNote(dateKey, text) {
   const data = loadJSON("trainingsplan_notes");
@@ -1445,14 +1540,17 @@ function render() {
   const weekRow = document.getElementById("weekRow");
   weekRow.innerHTML = "";
   const statusMap = loadJSON("trainingsplan_status");
+  const movesMap = loadMoves();
   for (let i = 0; i < 7; i++) {
     const d = addDays(viewWeekStart, i);
-    const isTrain = trainingDaysMon.includes(i);
+    const dKeyLoop = isoDate(d);
+    const isTrain = isEffectiveTrainDay(d);
+    const isMoved = !!movesMap[dKeyLoop] || !!getMoveSourceFromMoves(movesMap, dKeyLoop);
     const dayIsToday = sameDate(d, realToday);
     const isLocked = d < planStartDate;
     const dStatus = statusMap[isoDate(d)];
     const div = document.createElement("div");
-    div.className = "day" + (isTrain ? " train" : "") + (dayIsToday ? " today" : "") + (i === selectedIndex ? " selected" : "") + (isLocked ? " locked" : "") + (dStatus === "success" ? " status-success" : "") + (dStatus === "fail" ? " status-fail" : "");
+    div.className = "day" + (isTrain ? " train" : "") + (dayIsToday ? " today" : "") + (i === selectedIndex ? " selected" : "") + (isLocked ? " locked" : "") + (dStatus === "success" ? " status-success" : "") + (dStatus === "fail" ? " status-fail" : "") + (isMoved ? " day-moved" : "");
     div.innerHTML =
       "<span class='name'>" + monShortDays[i] + "</span>" +
       "<span class='num2'>" + d.getDate() + "</span>" +
@@ -1462,7 +1560,7 @@ function render() {
     weekRow.appendChild(div);
   }
 
-  const isTrainSelected = trainingDaysMon.includes(selectedIndex);
+  const isTrainSelected = isEffectiveTrainDay(selectedDate);
   const titlePrefix = isToday ? "Heute" : fullDayNames[selectedIndex];
   const dateKey = isoDate(selectedDate);
   const card = document.getElementById("sessionCard");
@@ -1493,19 +1591,44 @@ function render() {
   }
 
   if (!isTrainSelected) {
+    const moves = loadMoves();
+    const movedTo = moves[dateKey] || null;
+    const baseTrainHere = trainingDaysMon.includes(selectedIndex);
+    const moveInfoHTML = (baseTrainHere && movedTo)
+      ? "<div class='move-row moved-away'>Training verschoben nach <b>" + formatDateLabel(movedTo) + "</b>." +
+        "<button class='move-undo-btn' id='undoMoveBtn'>Verschiebung aufheben</button></div>"
+      : "";
     card.innerHTML =
       "<div class='session-shell'>" +
       "<div class='side-bar'></div>" +
       "<div class='session rest'>" +
       "<h2>" + titlePrefix + "</h2>" +
-      "<div class='rest-stamp'>RUHETAG</div>" +
+      (moveInfoHTML || "<div class='rest-stamp'>RUHETAG</div>") +
       notesHTML +
       "</div></div>";
     attachNoteHandler(dateKey);
+    const undoMoveBtn = document.getElementById("undoMoveBtn");
+    if (undoMoveBtn) undoMoveBtn.addEventListener("click", () => undoMove(dateKey));
     return;
   }
 
   const isPastDay = selectedDate < realToday;
+
+  // Baustein für "Auf anderen Tag verlegen" bzw. Hinweis, wenn heute ein verlegter Tag ist.
+  const movesForCard = loadMoves();
+  const movedFromKey = getMoveSourceFromMoves(movesForCard, dateKey);
+  const moveRowHTML = movedFromKey
+    ? "<div class='move-row moved-here'>Verlegt von <b>" + formatDateLabel(movedFromKey) + "</b>." +
+      (isPastDay ? "" : "<button class='move-undo-btn' id='undoMoveBtn' data-key='" + movedFromKey + "'>Verschiebung aufheben</button>") +
+      "</div>"
+    : (isPastDay ? "" :
+      "<div class='move-row'>" +
+      "<button class='move-toggle-btn' id='moveToggleBtn'>Auf anderen Tag verlegen</button>" +
+      "<div class='move-picker' id='movePicker' style='display:none;'>" +
+      "<input type='date' id='moveDateInput' min='" + isoDate(selectedDate) + "'>" +
+      "<button id='confirmMoveBtn'>Verschieben</button>" +
+      "</div></div>");
+
   if (isPastDay) {
     const status = loadJSON("trainingsplan_status")[dateKey] || null;
     const justSubmitted = justSubmittedStatusKey === dateKey;
@@ -1554,6 +1677,7 @@ function render() {
       "</div>" +
       "<div class='session past" + pastStateClass + (justSubmitted ? " just-set" : "") + "'>" +
       "<h2>" + titlePrefix + "</h2>" +
+      moveRowHTML +
       "<div class='day-status-row'>" + statusRowHTML + "</div>" +
       "<div class='progress-row'><span class='progress-text'>" + doneSets + "/" + totalSets + " Sätze, " + warmDoneCount + "/" + warmup.length + " Aufwärmen</span>" +
       "<button class='reset-btn' id='toggleExBtn'>" + (openExDateKey === dateKey ? "Übungen ausblenden" : "Übungen anzeigen") + "</button></div>" +
@@ -1587,6 +1711,7 @@ function render() {
       box.addEventListener("click", () => toggleWarmupCheck(dateKey, box.dataset.wi));
     });
     if (status) attachNoteHandler(dateKey);
+    attachMoveHandlers(dateKey);
     drawBadgeIcons();
     return;
   }
@@ -1601,6 +1726,7 @@ function render() {
       "<div class='side-bar'></div>" +
       "<div class='session time-gate-session'>" +
       "<h2>" + titlePrefix + " &ndash; Trainingstag</h2>" +
+      moveRowHTML +
       "<div class='time-gate'>" +
       "<div class='time-gate-label'>Um wie viel Uhr startest du?</div>" +
       "<div class='time-gate-row'>" +
@@ -1612,6 +1738,7 @@ function render() {
       notesHTML +
       "</div></div>";
     attachNoteHandler(dateKey);
+    attachMoveHandlers(dateKey);
     const confirmBtn = document.getElementById("confirmTimeBtn");
     const timeInput = document.getElementById("startTimeInput");
     if (confirmBtn && timeInput) {
@@ -1680,6 +1807,7 @@ function render() {
     "</div>" +
     "<div class='session'>" +
     "<h2>" + titlePrefix + (isToday ? " ist Trainingstag" : "") + "</h2>" +
+    moveRowHTML +
     "<div class='time-block'>" +
     "<span class='t'>" + pad(startHour) + ":" + pad(startMin) + "</span>" +
     "<span class='arrow'>&rarr;</span>" +
@@ -1714,7 +1842,33 @@ function render() {
     render();
   });
   attachNoteHandler(dateKey);
+  attachMoveHandlers(dateKey);
   drawBadgeIcons();
+}
+
+// Bindet Klicks für "Auf anderen Tag verlegen" / Bestätigen / Verschiebung aufheben,
+// unabhängig davon, in welcher Ansicht (Zeitabfrage, aktive Session, vergangener Tag) sie vorkommen.
+function attachMoveHandlers(dateKey) {
+  const moveToggleBtn = document.getElementById("moveToggleBtn");
+  const movePicker = document.getElementById("movePicker");
+  if (moveToggleBtn && movePicker) {
+    moveToggleBtn.addEventListener("click", () => {
+      movePicker.style.display = (movePicker.style.display === "none") ? "flex" : "none";
+    });
+  }
+  const confirmMoveBtn = document.getElementById("confirmMoveBtn");
+  if (confirmMoveBtn) {
+    confirmMoveBtn.addEventListener("click", () => {
+      const input = document.getElementById("moveDateInput");
+      const val = input ? input.value : "";
+      if (!val) return;
+      moveTrainingDay(dateKey, val);
+    });
+  }
+  const undoMoveBtn = document.getElementById("undoMoveBtn");
+  if (undoMoveBtn) {
+    undoMoveBtn.addEventListener("click", () => undoMove(undoMoveBtn.dataset.key || dateKey));
+  }
 }
 
 // Zeichnet kleine Icons (Blitz, Satz-Haken, Übungs-Nummer) per Canvas statt Emoji
@@ -1947,21 +2101,22 @@ setInterval(render, 15000);
   }
   function computeSplashStats() {
     const today = new Date();
-    const todayIdx = (today.getDay() + 6) % 7;
     const monday = getMonday(today);
 
-    let weekDone = 0;
-    trainingDaysMon.forEach(idx => {
-      const d = addDays(monday, idx);
-      if (dayFullyDone(isoDate(d))) weekDone++;
-    });
+    let weekDone = 0, weekTotal = 0;
+    for (let i = 0; i < 7; i++) {
+      const d = addDays(monday, i);
+      if (isEffectiveTrainDay(d)) {
+        weekTotal++;
+        if (dayFullyDone(isoDate(d))) weekDone++;
+      }
+    }
 
     let streak = 0;
     let cursor = new Date(today);
     for (let i = 0; i < 365; i++) {
-      const idx = (cursor.getDay() + 6) % 7;
       if (cursor < planStartDate) break;
-      if (trainingDaysMon.includes(idx)) {
+      if (isEffectiveTrainDay(cursor)) {
         const key = isoDate(cursor);
         const isToday = sameDate(cursor, today);
         if (dayFullyDone(key)) streak++;
@@ -1971,16 +2126,15 @@ setInterval(render, 15000);
     }
 
     let nextLabel = "Heute";
-    if (!(trainingDaysMon.includes(todayIdx) && !dayFullyDone(isoDate(today)))) {
+    if (!(isEffectiveTrainDay(today) && !dayFullyDone(isoDate(today)))) {
       let d = addDays(today, 1);
       nextLabel = "–";
       for (let i = 0; i < 8; i++) {
-        const idx = (d.getDay() + 6) % 7;
-        if (trainingDaysMon.includes(idx)) { nextLabel = fullDayNames[idx]; break; }
+        if (isEffectiveTrainDay(d)) { nextLabel = fullDayNames[(d.getDay() + 6) % 7]; break; }
         d = addDays(d, 1);
       }
     }
-    return { weekDone, weekTotal: trainingDaysMon.length, streak, nextLabel };
+    return { weekDone, weekTotal, streak, nextLabel };
   }
 
   function fillSplashDetails() {

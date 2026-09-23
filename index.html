@@ -1092,12 +1092,31 @@
   }
   .auth-error { font-size: 12px; color: #f0958d; margin-bottom: 10px; min-height: 1px; }
 
-  .account-btn {
-    position: fixed; top: calc(14px + env(safe-area-inset-top, 0px)); right: 14px; z-index: 50;
-    background: var(--bg-alt-2); border: 1px solid var(--line); color: var(--muted);
-    font-size: 11px; font-weight: 600; padding: 6px 11px; border-radius: 999px; cursor: pointer;
-    font-family: inherit;
+  .account-menu { position: relative; margin-left: 10px; padding-bottom: 8px; }
+  .account-toggle {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: var(--bg-alt-2); border: 1px solid var(--line); color: var(--cobalt-light);
+    font-size: 16px; font-weight: 700; cursor: pointer; font-family: inherit;
+    display: flex; align-items: center; justify-content: center; line-height: 1;
   }
+  .account-toggle:active { transform: translateY(1px); }
+  .account-dropdown {
+    position: absolute; top: calc(100% + 8px); right: 0;
+    background: linear-gradient(180deg, var(--bg-alt-2), var(--bg-alt));
+    border: 1px solid var(--line); border-radius: 8px;
+    min-width: 168px; box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+    overflow: hidden; display: none; z-index: 40;
+  }
+  .account-dropdown.open { display: block; }
+  .account-email { font-size: 10.5px; color: var(--muted); padding: 10px 14px 6px; border-bottom: 1px solid var(--line-soft); word-break: break-all; }
+  .account-dropdown button {
+    display: block; width: 100%; text-align: left;
+    background: none; border: none; color: var(--ink);
+    font-size: 13px; font-weight: 600; padding: 11px 14px; cursor: pointer; font-family: inherit;
+  }
+  .account-dropdown button:not(:last-child) { border-bottom: 1px solid var(--line-soft); }
+  .account-dropdown button:active { background: var(--cobalt-dim); }
+  .account-dropdown button.danger { color: #f0958d; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 
@@ -1118,8 +1137,6 @@
     </div>
   </div>
 </div>
-
-<button class="account-btn" id="accountBtn" style="display:none;">Abmelden</button>
 
 <div id="splash" style="display:none;">
   <div class="splash-bg-grid"></div>
@@ -1157,6 +1174,14 @@
   <div class="clock">
     <div class="time" id="clockTime">--:--</div>
     <div class="label">Jetzt</div>
+  </div>
+  <div class="account-menu" id="accountMenu" style="display:none;">
+    <button class="account-toggle" id="accountToggle">⋮</button>
+    <div class="account-dropdown" id="accountDropdown">
+      <div class="account-email" id="accountEmail"></div>
+      <button id="syncNowBtn">Jetzt sichern</button>
+      <button class="danger" id="accountBtn">Abmelden</button>
+    </div>
   </div>
 </div>
 
@@ -1220,11 +1245,12 @@ async function pushToCloud() {
   } catch (e) { console.error("Cloud-Sync fehlgeschlagen", e); }
 }
 async function pullFromCloud() {
-  if (!currentUser) return;
+  if (!currentUser) return false;
   try {
     const { data, error } = await supabaseClient.from("training_data").select("data").eq("user_id", currentUser.id).maybeSingle();
-    if (!error && data && data.data) applySyncData(data.data);
-  } catch (e) { console.error("Cloud-Daten laden fehlgeschlagen", e); }
+    if (!error && data && data.data) { applySyncData(data.data); return true; }
+    return false;
+  } catch (e) { console.error("Cloud-Daten laden fehlgeschlagen", e); return false; }
 }
 
 function showAuthError(msg) {
@@ -1279,8 +1305,14 @@ function showAuthScreen() { document.getElementById("authScreen").style.display 
 async function onAuthReady(user) {
   currentUser = user;
   hideAuthScreen();
-  document.getElementById("accountBtn").style.display = "";
-  await pullFromCloud();
+  document.getElementById("accountMenu").style.display = "flex";
+  document.getElementById("accountEmail").textContent = user.email || "";
+  const hadCloudData = await pullFromCloud();
+  if (!hadCloudData) {
+    // Erster Login mit diesem Account auf diesem Gerät: es gibt noch keine Cloud-Daten
+    // für diesen Account -> die hier vorhandenen lokalen Daten hochladen, statt sie zu verlieren.
+    await pushToCloud();
+  }
   render();
   document.getElementById("splash").style.display = "";
   document.getElementById("appShell").style.display = "";
@@ -1293,6 +1325,22 @@ async function onAuthReady(user) {
   document.getElementById("accountBtn").addEventListener("click", async () => {
     await supabaseClient.auth.signOut();
     location.reload();
+  });
+  document.getElementById("syncNowBtn").addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    const original = btn.textContent;
+    btn.textContent = "Sichere...";
+    await pushToCloud();
+    btn.textContent = "Gesichert ✓";
+    setTimeout(() => { btn.textContent = original; document.getElementById("accountDropdown").classList.remove("open"); }, 900);
+  });
+  document.getElementById("accountToggle").addEventListener("click", (e) => {
+    e.stopPropagation();
+    document.getElementById("accountDropdown").classList.toggle("open");
+  });
+  document.addEventListener("click", (e) => {
+    const menu = document.getElementById("accountMenu");
+    if (menu && !menu.contains(e.target)) document.getElementById("accountDropdown").classList.remove("open");
   });
   supabaseClient.auth.onAuthStateChange((event, session) => {
     if (event === "SIGNED_IN" && session && session.user && !currentUser) {

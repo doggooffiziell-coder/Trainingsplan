@@ -374,6 +374,89 @@
   .clock .time { font-size: 25px; font-weight: 700; font-variant-numeric: tabular-nums; }
   .clock .label { font-size: 10px; color: var(--muted); letter-spacing: 0.6px; }
 
+  .info-btn {
+    flex-shrink: 0;
+    align-self: flex-end;
+    margin-bottom: 8px;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    border: 1.5px solid var(--muted);
+    background: transparent;
+    color: var(--muted);
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-weight: 700;
+    font-size: 14px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+  }
+  .info-btn:active { background: var(--bg-alt-2); color: var(--ink); border-color: var(--cobalt-light); }
+
+  .info-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 800;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+  .info-overlay.open { opacity: 1; pointer-events: auto; }
+  .info-sheet {
+    width: 100%;
+    max-width: 480px;
+    max-height: 78vh;
+    background: var(--bg-alt);
+    border: 1px solid var(--line);
+    border-bottom: none;
+    border-radius: 18px 18px 0 0;
+    box-shadow: 0 -8px 30px rgba(0,0,0,0.4);
+    display: flex;
+    flex-direction: column;
+    transform: translateY(16px);
+    transition: transform 0.25s ease;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .info-overlay.open .info-sheet { transform: translateY(0); }
+  .info-sheet-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 18px 12px;
+    border-bottom: 1px solid var(--line-soft);
+    flex-shrink: 0;
+  }
+  .info-sheet-title { font-family: var(--display-font); font-size: 17px; font-weight: 700; color: var(--ink); }
+  .info-close-btn {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: none;
+    background: var(--bg-alt-2);
+    color: var(--muted);
+    font-size: 18px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .info-sheet-body {
+    overflow-y: auto;
+    padding: 16px 18px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .info-block-title { font-size: 13px; font-weight: 700; color: var(--cobalt-light); margin-bottom: 4px; }
+  .info-block-text { font-size: 13px; line-height: 1.5; color: var(--steel); }
+
   .week-nav {
     display: flex;
     align-items: center;
@@ -1158,6 +1241,42 @@
     <div class="time" id="clockTime">--:--</div>
     <div class="label">Jetzt</div>
   </div>
+  <button class="info-btn" id="infoBtn" aria-label="Anleitung anzeigen">i</button>
+</div>
+
+<div class="info-overlay" id="infoOverlay">
+  <div class="info-sheet">
+    <div class="info-sheet-head">
+      <div class="info-sheet-title">Anleitung</div>
+      <button class="info-close-btn" id="infoCloseBtn" aria-label="Schließen">&times;</button>
+    </div>
+    <div class="info-sheet-body">
+      <div class="info-block">
+        <div class="info-block-title">So funktioniert der Zirkel</div>
+        <div class="info-block-text">Jeder Trainingstag läuft im Zirkel: ein Satz einer Übung, kurze Pause, ein Satz der nächsten Übung – bis alle Übungen dran waren, dann beginnt Runde 2. So kommen nie zwei Sätze derselben Übung direkt hintereinander. Der jeweils nächste offene Satz ist antippbar, mit "Los" startest du die Stoppuhr und mit "Abschließen" hakst du den Satz ab.</div>
+      </div>
+      <div class="info-block">
+        <div class="info-block-title">Die drei Pläne</div>
+        <div class="info-block-text">Montag = GK1, Mittwoch = GK2, Freitag = GK3. Jeder Plan hat eigene Übungen, Wiederholungen, Sätze und Pausenzeiten – die App wählt automatisch den richtigen Plan für den jeweiligen Tag.</div>
+      </div>
+      <div class="info-block">
+        <div class="info-block-title">Woche &amp; Tage</div>
+        <div class="info-block-text">Mit den Pfeilen oder "Heute" navigierst du durch die Wochen. Tippe auf einen Tag in der Wochenleiste, um dessen Training zu öffnen.</div>
+      </div>
+      <div class="info-block">
+        <div class="info-block-title">Training verschieben</div>
+        <div class="info-block-text">Kommst du an einem Trainingstag nicht dazu, kannst du ihn über "Auf anderen Tag verlegen" auf ein anderes Datum legen. Der Übungsplan dieses Tages bleibt dabei erhalten. Über "Verschiebung aufheben" machst du das rückgängig.</div>
+      </div>
+      <div class="info-block">
+        <div class="info-block-title">Aufwärmen &amp; Notizen</div>
+        <div class="info-block-text">Oben im Tag kannst du zwischen Haupttraining und Aufwärmen wechseln. Zu jedem Tag lässt sich außerdem eine Notiz speichern, z.B. für Gewicht oder Gefühl.</div>
+      </div>
+      <div class="info-block">
+        <div class="info-block-title">Serie &amp; Fortschritt</div>
+        <div class="info-block-text">Ein Tag zählt als komplett, wenn alle Sätze und das Aufwärmen abgehakt sind. Auf dem Startbildschirm siehst du deinen Wochenfortschritt und deine aktuelle Serie an aufeinanderfolgenden Trainingstagen.</div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="week-nav">
@@ -1343,25 +1462,68 @@ const warmup = [
   ["Lockeres Hängen an der Stange", "2 × 10–15 Sek."]
 ];
 
-// Jede Übung hat jetzt einzelne Sätze mit einer konkreten Zielzahl statt
-// nur "3 × 5–12". Die Sätze werden nacheinander freigeschaltet.
-const exercises = [
-  { name: "Klimmzüge", sets: 3, target: 5, unit: "Wdh." },
-  { name: "Liegestütze", sets: 3, target: 10, unit: "Wdh." },
-  { name: "An der niedrigen Stange hochziehen", sets: 3, target: 10, unit: "Wdh." },
-  { name: "Kniebeugen", sets: 3, target: 15, unit: "Wdh." },
-  { name: "Dips ausprobieren", sets: 2, target: 5, unit: "Wdh." },
-  { name: "Knie im Hängen hochziehen", sets: 2, target: 8, unit: "Wdh." },
-  { name: "Bauch halten (Plank)", sets: 2, target: 30, unit: "Sek." }
-];
+// Jede Übung hat eine feste Satzzahl, eine Ziel-Angabe als fertiger Text
+// (Wdh./Sek., inkl. "/Bein" o.ä.) und eine eigene Pause in Sekunden danach.
+// Drei eigene Pläne für Montag (GK1), Mittwoch (GK2) und Freitag (GK3).
+const dayPlans = {
+  0: { // Montag – GK1
+    label: "GK1",
+    exercises: [
+      { name: "Klimmzüge (sauber, volle Range)", sets: 4, targetLabel: "6–8 Wdh.", rest: 120 },
+      { name: "Liegestütze (Füße erhöht auf Box)", sets: 3, targetLabel: "15–20 Wdh.", rest: 90 },
+      { name: "Negative Dips (an der niedrigen Bar, 3–4 Sek. Absenkzeit)", sets: 3, targetLabel: "5–6 Wdh.", rest: 90 },
+      { name: "Australian Pull-ups (breiter Griff, an niedriger Stange)", sets: 3, targetLabel: "10–12 Wdh.", rest: 90 },
+      { name: "Bulgarian Split Squats (hinterer Fuß auf Box)", sets: 3, targetLabel: "12–15 Wdh./Bein", rest: 90 },
+      { name: "Plank", sets: 3, targetLabel: "45–60 Sek.", rest: 60 }
+    ]
+  },
+  2: { // Mittwoch – GK2
+    label: "GK2",
+    exercises: [
+      { name: "Chin-ups (Untergriff, eng)", sets: 4, targetLabel: "6–8 Wdh.", rest: 120 },
+      { name: "Archer Push-ups (oder erhöhte Liegestütze, falls zu schwer)", sets: 3, targetLabel: "8–10 Wdh./Seite", rest: 90 },
+      { name: "Negative Dips (Ziel: Absenkzeit steigern auf 5 Sek.)", sets: 3, targetLabel: "6–8 Wdh.", rest: 90 },
+      { name: "Monkey Bar Hangeln (so weit wie möglich, Skill)", sets: 3, targetLabel: "max.", rest: 90 },
+      { name: "Ausfallschritte (gehend oder Bulgarian Split Squat)", sets: 3, targetLabel: "12 Wdh./Bein", rest: 90 },
+      { name: "Hanging Knee Raises (an der Klimmzugstange)", sets: 3, targetLabel: "10–12 Wdh.", rest: 60 }
+    ]
+  },
+  4: { // Freitag – GK3
+    label: "GK3",
+    exercises: [
+      { name: "Wide Grip Pull-ups", sets: 4, targetLabel: "5–6 Wdh.", rest: 120 },
+      { name: "Diamond Push-ups", sets: 3, targetLabel: "10–12 Wdh.", rest: 90 },
+      { name: "Negative Ring-Dips (an den Ringen, Skill-Aufbau)", sets: 3, targetLabel: "4–5 Wdh.", rest: 120 },
+      { name: "Pull-Up Ladder (dynamisches Hangeln, Skill)", sets: 3, targetLabel: "max.", rest: 90 },
+      { name: "Pistol-Squat-Progression (an der Box, Hand zum Festhalten)", sets: 3, targetLabel: "6–8 Wdh./Bein", rest: 90 },
+      { name: "Side Plank", sets: 3, targetLabel: "30–45 Sek./Seite", rest: 60 }
+    ]
+  }
+};
+const totalPlanExercises = Object.values(dayPlans).reduce((s, p) => s + p.exercises.length, 0);
 
-// Pause zwischen jeder Übung im Zirkel (Sekunden)
-const CIRCUIT_REST_SECONDS = 60;
+// Ermittelt, zu welchem Basis-Wochentag (0=Mo, 2=Mi, 4=Fr) ein Datum gehört –
+// bei verlegten Tagen zählt der ursprüngliche Wochentag, nicht der neue.
+function getPlanIndexForDate(dateKey) {
+  const moves = loadMoves();
+  const movedFromKey = getMoveSourceFromMoves(moves, dateKey);
+  const baseKey = movedFromKey || dateKey;
+  const parts = baseKey.split("-").map(Number);
+  const d = new Date(parts[0], parts[1] - 1, parts[2]);
+  const idx = (d.getDay() + 6) % 7;
+  return dayPlans[idx] ? idx : 0;
+}
+function getExercisesForDate(dateKey) {
+  return dayPlans[getPlanIndexForDate(dateKey)].exercises;
+}
+function formatRest(seconds) {
+  return (seconds % 60 === 0) ? (seconds / 60) + " min" : seconds + " Sek.";
+}
 
-// Baut die Reihenfolge im Zirkel-Prinzip: erst ein Satz jeder Übung (Runde 1),
-// dann erst der zweite Satz jeder Übung (Runde 2) usw. So kommen nie zwei
-// Sätze derselben Übung direkt hintereinander.
-function buildCircuitSequence() {
+// Baut die Reihenfolge im Zirkel-Prinzip für die übergebenen Übungen: erst ein
+// Satz jeder Übung (Runde 1), dann erst der zweite Satz jeder Übung (Runde 2)
+// usw. So kommen nie zwei Sätze derselben Übung direkt hintereinander.
+function buildCircuitSequence(exercises) {
   const maxSets = Math.max(...exercises.map(ex => ex.sets));
   const seq = [];
   for (let r = 0; r < maxSets; r++) {
@@ -1371,7 +1533,6 @@ function buildCircuitSequence() {
   }
   return seq;
 }
-const circuitSequence = buildCircuitSequence();
 
 // Rendert den kompletten Zirkel für einen Tag als fortlaufende Liste:
 // Satz einer Übung -> Pause -> Satz der nächsten Übung -> Pause -> ...
@@ -1380,6 +1541,8 @@ function renderCircuit(dateKey) {
   // Läuft noch ein Satz von einem anderen Tag (z.B. nach Navigieren)? Dann verwerfen.
   if (runningStep && runningStep.dateKey !== dateKey) stopRunning();
 
+  const exercises = getExercisesForDate(dateKey);
+  const circuitSequence = buildCircuitSequence(exercises);
   const cnts = exercises.map((_, i) => getSetCount(dateKey, i));
   let activeFound = false;
   let lastRound = -1;
@@ -1399,7 +1562,7 @@ function renderCircuit(dateKey) {
     else if (!activeFound) { status = isRunningThis ? "running" : "active"; activeFound = true; }
 
     const loggedTime = done ? getSetTime(dateKey, step.exIdx, step.setIdx) : null;
-    const targetLine = "Satz " + (step.setIdx + 1) + " von " + ex.sets + ", " + ex.target + " " + ex.unit
+    const targetLine = "Satz " + (step.setIdx + 1) + " von " + ex.sets + ", " + ex.targetLabel
       + (loggedTime !== null ? " &ndash; gebraucht: " + formatDuration(loggedTime) : "");
 
     let actionHTML = "";
@@ -1422,7 +1585,7 @@ function renderCircuit(dateKey) {
       + "</div>";
 
     if (idx < circuitSequence.length - 1) {
-      html += "<div class='circuit-rest'><span class='rest-dot'></span>" + CIRCUIT_REST_SECONDS + " Sek. Pause, dann " + exercises[circuitSequence[idx + 1].exIdx].name + "</div>";
+      html += "<div class='circuit-rest'><span class='rest-dot'></span>" + formatRest(ex.rest) + " Pause, dann " + exercises[circuitSequence[idx + 1].exIdx].name + "</div>";
     }
   });
   html += "</div>";
@@ -1529,17 +1692,19 @@ function getSetCount(dateKey, exIdx) {
   const checks = loadJSON("trainingsplan_checks")[dateKey] || {};
   const val = checks[exIdx];
   if (typeof val === "number") return val;
-  return val ? exercises[exIdx].sets : 0;
+  const ex = getExercisesForDate(dateKey)[exIdx];
+  return (val && ex) ? ex.sets : 0;
 }
 function isExerciseDone(dateKey, exIdx) {
-  return getSetCount(dateKey, exIdx) >= exercises[exIdx].sets;
+  const ex = getExercisesForDate(dateKey)[exIdx];
+  return ex ? getSetCount(dateKey, exIdx) >= ex.sets : false;
 }
 // Nächsten Satz abhaken (rückt die Übung einen Satz weiter vor)
 function advanceSet(dateKey, exIdx) {
   const data = loadJSON("trainingsplan_checks");
   if (!data[dateKey]) data[dateKey] = {};
   const cur = getSetCount(dateKey, exIdx);
-  const total = exercises[exIdx].sets;
+  const total = getExercisesForDate(dateKey)[exIdx].sets;
   if (cur < total) data[dateKey][exIdx] = cur + 1;
   saveJSON("trainingsplan_checks", data);
   render();
@@ -1823,7 +1988,7 @@ function render() {
     justSubmittedStatusKey = null;
 
     let doneSets = 0, totalSets = 0;
-    exercises.forEach((ex, i) => { totalSets += ex.sets; doneSets += getSetCount(dateKey, i); });
+    getExercisesForDate(dateKey).forEach((ex, i) => { totalSets += ex.sets; doneSets += getSetCount(dateKey, i); });
     const rows = renderCircuit(dateKey);
 
     const warmupChecks = loadJSON("trainingsplan_warmup")[dateKey] || {};
@@ -1957,7 +2122,7 @@ function render() {
   const durationMin = (endHour * 60 + endMin) - (startHour * 60 + startMin);
 
   let doneSets = 0, totalSets = 0;
-  exercises.forEach((ex, i) => { totalSets += ex.sets; doneSets += getSetCount(dateKey, i); });
+  getExercisesForDate(dateKey).forEach((ex, i) => { totalSets += ex.sets; doneSets += getSetCount(dateKey, i); });
   const rows = renderCircuit(dateKey);
 
   let warmupRows = "";
@@ -2252,6 +2417,19 @@ setInterval(render, 15000);
 
 // Startbildschirm nur zeigen, wenn App komplett neu gestartet wurde
 // oder seit dem letzten Mal 2+ Stunden vergangen sind.
+// Info-Overlay (Anleitung), aufrufbar über den (i)-Button im Header.
+(function initInfoOverlay() {
+  const btn = document.getElementById("infoBtn");
+  const overlay = document.getElementById("infoOverlay");
+  const closeBtn = document.getElementById("infoCloseBtn");
+  if (!btn || !overlay || !closeBtn) return;
+  const open = () => overlay.classList.add("open");
+  const close = () => overlay.classList.remove("open");
+  btn.addEventListener("click", open);
+  closeBtn.addEventListener("click", close);
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+})();
+
 function initSplash() {
   const splash = document.getElementById("splash");
   const startBtn = document.getElementById("splashStartBtn");
@@ -2278,14 +2456,15 @@ function initSplash() {
   function dayFullyDone(dateKey) {
     const checks = loadJSON("trainingsplan_checks")[dateKey] || {};
     const warm = loadJSON("trainingsplan_warmup")[dateKey] || {};
+    const dayExercises = getExercisesForDate(dateKey);
     let doneMain = 0, doneWarm = 0;
-    exercises.forEach((ex, i) => {
+    dayExercises.forEach((ex, i) => {
       const val = checks[i];
       const cnt = typeof val === "number" ? val : (val ? ex.sets : 0);
       if (cnt >= ex.sets) doneMain++;
     });
     warmup.forEach((_, i) => { if (warm[i]) doneWarm++; });
-    return doneMain === exercises.length && doneWarm === warmup.length;
+    return doneMain === dayExercises.length && doneWarm === warmup.length;
   }
   function computeSplashStats() {
     const today = new Date();
@@ -2364,7 +2543,7 @@ function initSplash() {
       "Trainingstage werden abgeglichen (Mo · Mi · Fr)",
       "Fortschritt wird ausgewertet – " + splashStats.weekDone + "/" + splashStats.weekTotal + " Einheiten diese Woche",
       "Aktuelle Serie wird ermittelt – " + splashStats.streak + " am Stück",
-      "Übungskatalog wird vorbereitet (" + exercises.length + " Übungen)",
+      "Übungskatalog wird vorbereitet (" + totalPlanExercises + " Übungen in 3 Plänen)",
       "Aufwärmroutine wird initialisiert (" + warmup.length + " Übungen)",
       "Bereit"
     ];

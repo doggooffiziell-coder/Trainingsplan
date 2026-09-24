@@ -657,6 +657,21 @@
   .now-tag { font-size: 11.5px; color: var(--red); font-weight: 700; margin-bottom: 12px; letter-spacing: 0.2px; }
   .done-hint { font-size: 11.5px; color: var(--muted); margin-bottom: 12px; }
   .pause-hint { font-size: 11.5px; color: var(--muted); margin-bottom: 12px; }
+  .lock-hint {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11.5px;
+    color: var(--cobalt-light);
+    background: var(--cobalt-dim);
+    border: 1px solid rgba(10,132,255,0.35);
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-bottom: 12px;
+    font-weight: 600;
+  }
+  .ex-list.locked { position: relative; pointer-events: none; opacity: 0.55; filter: saturate(0.7); }
+  .reset-btn[disabled] { opacity: 0.4; pointer-events: none; }
   .change-time-btn {
     font-size: 11.5px; color: var(--cobalt-light); background: none; border: none;
     text-decoration: underline; cursor: pointer; padding: 0; font-weight: 600;
@@ -863,6 +878,10 @@
   .circuit-step.locked { opacity: 0.4; }
   .circuit-step.done { opacity: 0.58; border-left-color: var(--cobalt); }
   .circuit-step.active { border-left-color: var(--cobalt-light); }
+  .circuit-list.warm .circuit-step.active { border-left-color: var(--steel); }
+  .circuit-more { text-align: center; padding: 11px; margin-top: 8px; border: 1px dashed var(--line); border-radius: 12px; font-size: 13px; font-weight: 700; color: var(--cobalt-light); cursor: pointer; }
+  .circuit-more span { color: var(--muted); font-weight: 500; margin-left: 4px; }
+  .circuit-more:active { transform: scale(0.98); }
   .circuit-step.running { border-left-color: var(--green); }
   .running-tag { color: var(--green-light); font-weight: 700; }
   .circuit-run-group { display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
@@ -1455,11 +1474,11 @@ function parseStartTime(dateKey) {
 }
 
 const warmup = [
-  ["Hampelmänner", "2 × 20"],
-  ["Armkreisen vor & zurück", "2 × 15"],
-  ["Schulterkreisen", "2 × 15"],
-  ["Lockere Kniebeugen", "1 × 10"],
-  ["Lockeres Hängen an der Stange", "2 × 10–15 Sek."]
+  { name: "Hampelmänner", sets: 2, targetLabel: "20 Wdh.", rest: 30 },
+  { name: "Armkreisen vor & zurück", sets: 2, targetLabel: "15 Wdh.", rest: 30 },
+  { name: "Schulterkreisen", sets: 2, targetLabel: "15 Wdh.", rest: 30 },
+  { name: "Lockere Kniebeugen", sets: 1, targetLabel: "10 Wdh.", rest: 30 },
+  { name: "Lockeres Hängen an der Stange", sets: 2, targetLabel: "10–15 Sek.", rest: 30 }
 ];
 
 // Jede Übung hat eine feste Satzzahl, eine Ziel-Angabe als fertiger Text
@@ -1537,17 +1556,23 @@ function buildCircuitSequence(exercises) {
 // Rendert den kompletten Zirkel für einen Tag als fortlaufende Liste:
 // Satz einer Übung -> Pause -> Satz der nächsten Übung -> Pause -> ...
 // gruppiert nach Runden. Nur der jeweils nächste offene Satz ist antippbar.
-function renderCircuit(dateKey) {
+let revealExtra = {}; // zusätzlich aufgeklappte Schritte je Tag und Bereich
+function revealKey(dateKey, kind) { return dateKey + "|" + kind; }
+function renderCircuit(dateKey, kind, limited) {
+  kind = kind || "main";
   // Läuft noch ein Satz von einem anderen Tag (z.B. nach Navigieren)? Dann verwerfen.
   if (runningStep && runningStep.dateKey !== dateKey) stopRunning();
 
-  const exercises = getExercisesForDate(dateKey);
+  const exercises = getPlanFor(dateKey, kind);
   const circuitSequence = buildCircuitSequence(exercises);
-  const cnts = exercises.map((_, i) => getSetCount(dateKey, i));
+  const cnts = exercises.map((_, i) => getSetCount(dateKey, i, kind));
   let activeFound = false;
   let lastRound = -1;
-  let html = "<div class='circuit-list'>";
+  const activeIdx = circuitSequence.findIndex(st => cnts[st.exIdx] <= st.setIdx);
+  const limit = (limited && activeIdx >= 0) ? activeIdx + 1 + (revealExtra[revealKey(dateKey, kind)] || 0) : circuitSequence.length;
+  let html = "<div class='circuit-list" + (kind === "warm" ? " warm" : "") + "'>";
   circuitSequence.forEach((step, idx) => {
+    if (idx >= limit) return;
     if (step.round !== lastRound) {
       html += "<div class='circuit-round-label'>Runde " + (step.round + 1) + "</div>";
       lastRound = step.round;
@@ -1555,27 +1580,27 @@ function renderCircuit(dateKey) {
     const ex = exercises[step.exIdx];
     const done = cnts[step.exIdx] > step.setIdx;
     const isRunningThis = !!runningStep && runningStep.dateKey === dateKey
-      && runningStep.exIdx === step.exIdx && runningStep.setIdx === step.setIdx;
+      && runningStep.kind === kind && runningStep.exIdx === step.exIdx && runningStep.setIdx === step.setIdx;
 
     let status = "locked";
     if (done) status = "done";
     else if (!activeFound) { status = isRunningThis ? "running" : "active"; activeFound = true; }
 
-    const loggedTime = done ? getSetTime(dateKey, step.exIdx, step.setIdx) : null;
+    const loggedTime = done ? getSetTime(dateKey, setTimeKey(step.exIdx, kind), step.setIdx) : null;
     const targetLine = "Satz " + (step.setIdx + 1) + " von " + ex.sets + ", " + ex.targetLabel
       + (loggedTime !== null ? " &ndash; gebraucht: " + formatDuration(loggedTime) : "");
 
     let actionHTML = "";
     if (status === "active") {
-      actionHTML = "<div class='circuit-go' data-ex='" + step.exIdx + "' data-set='" + step.setIdx + "'>Los</div>";
+      actionHTML = "<div class='circuit-go' data-kind='" + kind + "' data-ex='" + step.exIdx + "' data-set='" + step.setIdx + "'>Los</div>";
     } else if (status === "running") {
       actionHTML = "<div class='circuit-run-group'>"
         + "<span class='circuit-timer' id='runningTimer'>00:00</span>"
-        + "<div class='circuit-finish' data-ex='" + step.exIdx + "' data-set='" + step.setIdx + "'>Abschließen</div>"
+        + "<div class='circuit-finish' data-kind='" + kind + "' data-ex='" + step.exIdx + "' data-set='" + step.setIdx + "'>Abschließen</div>"
         + "</div>";
     }
 
-    html += "<div class='circuit-step " + status + "' data-ex='" + step.exIdx + "' data-set='" + step.setIdx + "'>"
+    html += "<div class='circuit-step " + status + "' data-kind='" + kind + "' data-ex='" + step.exIdx + "' data-set='" + step.setIdx + "'>"
       + "<canvas class='circuit-num-canvas' width='26' height='26' data-icon='num' data-num='" + (step.setIdx + 1) + "' data-done='" + (done ? 1 : 0) + "'></canvas>"
       + "<div class='circuit-info'>"
       + "<div class='circuit-name'>" + ex.name + (status === "running" ? " <span class='running-tag'>läuft&hellip;</span>" : "") + "</div>"
@@ -1584,12 +1609,15 @@ function renderCircuit(dateKey) {
       + actionHTML
       + "</div>";
 
-    if (idx < circuitSequence.length - 1) {
+    if (idx < circuitSequence.length - 1 && idx + 1 < limit) {
       html += "<div class='circuit-rest'><span class='rest-dot'></span>" + formatRest(ex.rest) + " Pause, dann " + exercises[circuitSequence[idx + 1].exIdx].name + "</div>";
     }
   });
+  if (limit < circuitSequence.length) {
+    html += "<div class='circuit-more' data-kind='" + kind + "'>Weiter &darr; <span>" + (circuitSequence.length - limit) + " weitere</span></div>";
+  }
   html += "</div>";
-  if (runningStep && runningStep.dateKey === dateKey) {
+  if (runningStep && runningStep.dateKey === dateKey && runningStep.kind === kind) {
     setTimeout(updateRunningTimerDisplay, 0);
   }
   return html;
@@ -1599,23 +1627,32 @@ function renderCircuit(dateKey) {
 // Abschließen -> Satz wird mit gebrauchter Zeit abgehakt, zuletzt abgehakter
 // Satz einer Übung -> antippen zum Zurücknehmen.
 function attachCircuitHandlers(card, dateKey) {
+  card.querySelectorAll(".circuit-more").forEach(el => {
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const k = revealKey(dateKey, el.dataset.kind);
+      revealExtra[k] = (revealExtra[k] || 0) + 1;
+      render();
+    });
+  });
   card.querySelectorAll(".circuit-go").forEach(el => {
     el.addEventListener("click", (e) => {
       e.stopPropagation();
-      startRunning(dateKey, parseInt(el.dataset.ex, 10), parseInt(el.dataset.set, 10));
+      startRunning(dateKey, parseInt(el.dataset.ex, 10), parseInt(el.dataset.set, 10), el.dataset.kind);
     });
   });
   card.querySelectorAll(".circuit-finish").forEach(el => {
     el.addEventListener("click", (e) => {
       e.stopPropagation();
-      finishRunning(dateKey, parseInt(el.dataset.ex, 10), parseInt(el.dataset.set, 10));
+      finishRunning(dateKey, parseInt(el.dataset.ex, 10), parseInt(el.dataset.set, 10), el.dataset.kind);
     });
   });
   card.querySelectorAll(".circuit-step.done").forEach(el => {
     el.addEventListener("click", () => {
       const exIdx = parseInt(el.dataset.ex, 10);
       const setIdx = parseInt(el.dataset.set, 10);
-      if (setIdx === getSetCount(dateKey, exIdx) - 1) retreatSet(dateKey, exIdx);
+      const k = el.dataset.kind || "main";
+      if (setIdx === getSetCount(dateKey, exIdx, k) - 1) retreatSet(dateKey, exIdx, k);
     });
   });
 }
@@ -1679,46 +1716,54 @@ function formatDateLabel(dateKeyStr) {
   const d = new Date(parts[0], parts[1] - 1, parts[2]);
   return d.toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" });
 }
-function toggleWarmupCheck(dateKey, exIdx) {
-  const data = loadJSON("trainingsplan_warmup");
-  if (!data[dateKey]) data[dateKey] = {};
-  data[dateKey][exIdx] = !data[dateKey][exIdx];
-  saveJSON("trainingsplan_warmup", data);
-  render();
-}
+function getPlanFor(dateKey, kind) { return kind === "warm" ? warmup : getExercisesForDate(dateKey); }
+function checkStoreKey(kind) { return kind === "warm" ? "trainingsplan_warmup" : "trainingsplan_checks"; }
+function setTimeKey(exIdx, kind) { return kind === "warm" ? "w" + exIdx : exIdx; }
 // Liest, wie viele Sätze einer Übung an einem Tag schon abgehakt sind.
 // (alte Daten waren noch true/false für "ganze Übung erledigt" – bleiben kompatibel)
-function getSetCount(dateKey, exIdx) {
-  const checks = loadJSON("trainingsplan_checks")[dateKey] || {};
+function getSetCount(dateKey, exIdx, kind) {
+  kind = kind || "main";
+  const checks = loadJSON(checkStoreKey(kind))[dateKey] || {};
   const val = checks[exIdx];
   if (typeof val === "number") return val;
-  const ex = getExercisesForDate(dateKey)[exIdx];
+  const ex = getPlanFor(dateKey, kind)[exIdx];
   return (val && ex) ? ex.sets : 0;
 }
-function isExerciseDone(dateKey, exIdx) {
-  const ex = getExercisesForDate(dateKey)[exIdx];
-  return ex ? getSetCount(dateKey, exIdx) >= ex.sets : false;
+function isExerciseDone(dateKey, exIdx, kind) {
+  const ex = getPlanFor(dateKey, kind || "main")[exIdx];
+  return ex ? getSetCount(dateKey, exIdx, kind) >= ex.sets : false;
 }
-// Nächsten Satz abhaken (rückt die Übung einen Satz weiter vor)
-function advanceSet(dateKey, exIdx) {
-  const data = loadJSON("trainingsplan_checks");
+function getSetTotals(dateKey, kind) {
+  let done = 0, total = 0;
+  getPlanFor(dateKey, kind).forEach((ex, i) => { total += ex.sets; done += getSetCount(dateKey, i, kind); });
+  return { done, total };
+}
+// Nächsten Satz abhaken
+function advanceSet(dateKey, exIdx, kind) {
+  kind = kind || "main";
+  const key = checkStoreKey(kind);
+  const data = loadJSON(key);
   if (!data[dateKey]) data[dateKey] = {};
-  const cur = getSetCount(dateKey, exIdx);
-  const total = getExercisesForDate(dateKey)[exIdx].sets;
+  const cur = getSetCount(dateKey, exIdx, kind);
+  const total = getPlanFor(dateKey, kind)[exIdx].sets;
   if (cur < total) data[dateKey][exIdx] = cur + 1;
-  saveJSON("trainingsplan_checks", data);
+  saveJSON(key, data);
+  delete revealExtra[revealKey(dateKey, kind)];
   render();
 }
-// Letzten abgehakten Satz zurücknehmen (nur der zuletzt erledigte Satz ist antippbar)
-function retreatSet(dateKey, exIdx) {
-  const data = loadJSON("trainingsplan_checks");
+// Letzten abgehakten Satz zurücknehmen
+function retreatSet(dateKey, exIdx, kind) {
+  kind = kind || "main";
+  const key = checkStoreKey(kind);
+  const data = loadJSON(key);
   if (!data[dateKey]) data[dateKey] = {};
-  const cur = getSetCount(dateKey, exIdx);
+  const cur = getSetCount(dateKey, exIdx, kind);
   if (cur > 0) {
     data[dateKey][exIdx] = cur - 1;
-    clearSetTime(dateKey, exIdx, cur - 1);
+    clearSetTime(dateKey, setTimeKey(exIdx, kind), cur - 1);
   }
-  saveJSON("trainingsplan_checks", data);
+  saveJSON(key, data);
+  delete revealExtra[revealKey(dateKey, kind)];
   render();
 }
 
@@ -1749,8 +1794,8 @@ function formatDuration(totalSeconds) {
 let runningStep = null; // { dateKey, exIdx, setIdx, startedAt }
 let runningTickInterval = null;
 
-function startRunning(dateKey, exIdx, setIdx) {
-  runningStep = { dateKey, exIdx, setIdx, startedAt: Date.now() };
+function startRunning(dateKey, exIdx, setIdx, kind) {
+  runningStep = { dateKey, exIdx, setIdx, kind: kind || "main", startedAt: Date.now() };
   if (runningTickInterval) clearInterval(runningTickInterval);
   runningTickInterval = setInterval(updateRunningTimerDisplay, 1000);
   render();
@@ -1766,12 +1811,13 @@ function updateRunningTimerDisplay() {
   el.textContent = formatDuration(Math.floor((Date.now() - runningStep.startedAt) / 1000));
 }
 // Satz mit der tatsächlich gebrauchten Zeit abschließen, während "Läuft..." steht
-function finishRunning(dateKey, exIdx, setIdx) {
+function finishRunning(dateKey, exIdx, setIdx, kind) {
+  kind = kind || "main";
   if (!runningStep) return;
   const seconds = Math.floor((Date.now() - runningStep.startedAt) / 1000);
-  saveSetTime(dateKey, exIdx, setIdx, seconds);
+  saveSetTime(dateKey, setTimeKey(exIdx, kind), setIdx, seconds);
   stopRunning();
-  advanceSet(dateKey, exIdx);
+  advanceSet(dateKey, exIdx, kind);
 }
 function resetDay(dateKey) {
   const data = loadJSON("trainingsplan_checks");
@@ -1988,22 +2034,11 @@ function render() {
     justSubmittedStatusKey = null;
 
     let doneSets = 0, totalSets = 0;
-    getExercisesForDate(dateKey).forEach((ex, i) => { totalSets += ex.sets; doneSets += getSetCount(dateKey, i); });
+    getExercisesForDate(dateKey).forEach((ex, i) => { totalSets += ex.sets; doneSets += getSetCount(dateKey, i, "main"); });
     const rows = renderCircuit(dateKey);
-
-    const warmupChecks = loadJSON("trainingsplan_warmup")[dateKey] || {};
-    let warmDoneCount = 0;
-    let warmupRows = "";
-    warmup.forEach((w, i) => {
-      const isDone = !!warmupChecks[i];
-      if (isDone) warmDoneCount++;
-      warmupRows += "<div class='task-card warm-card" + (isDone ? " done" : "") + "'>"
-        + "<canvas class='badge-num badge-icon-canvas' width='16' height='16' data-icon='bolt'></canvas>"
-        + "<span class='name'>" + w[0] + "</span>"
-        + "<span class='reps warm-reps'>" + w[1] + "</span>"
-        + "<span class='check-circle warm-check" + (isDone ? " checked" : "") + "' data-wi='" + i + "'>&#10003;</span>"
-        + "</div>";
-    });
+  const warmDoneCount = getSetTotals(dateKey, "warm").done;
+  const warmTotalSets = getSetTotals(dateKey, "warm").total;
+  const warmupRows = renderCircuit(dateKey, "warm");
 
     const statusRowHTML = status
       ? "<div class='status-badge " + status + (justSubmitted ? " just-set" : "") + "'>" + (status === "success" ? "&#10003; Erfolgreich" : "&#10007; Nicht erfolgreich") + "</div>" +
@@ -2032,7 +2067,7 @@ function render() {
       "<h2>" + titlePrefix + "</h2>" +
       moveRowHTML +
       "<div class='day-status-row'>" + statusRowHTML + "</div>" +
-      "<div class='progress-row'><span class='progress-text'>" + doneSets + "/" + totalSets + " Sätze, " + warmDoneCount + "/" + warmup.length + " Aufwärmen</span>" +
+      "<div class='progress-row'><span class='progress-text'>" + doneSets + "/" + totalSets + " Sätze, " + warmDoneCount + "/" + warmTotalSets + " Aufwärmen</span>" +
       "<button class='reset-btn' id='toggleExBtn'>" + (openExDateKey === dateKey ? "Übungen ausblenden" : "Übungen anzeigen") + "</button></div>" +
       "<div class='ex-list-collapsed' id='exListPast' style='display:" + (openExDateKey === dateKey ? "block" : "none") + ";'>" +
       "<div class='main-head'>Übungen</div>" +
@@ -2060,9 +2095,6 @@ function render() {
       });
     }
     attachCircuitHandlers(card, dateKey);
-    card.querySelectorAll(".check-circle[data-wi]").forEach(box => {
-      box.addEventListener("click", () => toggleWarmupCheck(dateKey, box.dataset.wi));
-    });
     if (status) attachNoteHandler(dateKey);
     attachMoveHandlers(dateKey);
     drawBadgeIcons();
@@ -2112,6 +2144,7 @@ function render() {
   const end = new Date(selectedDate); end.setHours(endHour, endMin, 0, 0);
   const inSlot = isToday && now >= start && now <= end;
   const isPastSession = isToday && now > end;
+  const beforeStart = isToday && now < start; // Startzeit gesetzt, aber noch nicht erreicht -> nur Vorschau
   let pct = 0;
   if (isToday) {
     if (now >= end) pct = 100;
@@ -2122,35 +2155,27 @@ function render() {
   const durationMin = (endHour * 60 + endMin) - (startHour * 60 + startMin);
 
   let doneSets = 0, totalSets = 0;
-  getExercisesForDate(dateKey).forEach((ex, i) => { totalSets += ex.sets; doneSets += getSetCount(dateKey, i); });
-  const rows = renderCircuit(dateKey);
-
-  let warmupRows = "";
-  const warmupChecks = loadJSON("trainingsplan_warmup")[dateKey] || {};
-  let warmDoneCount = 0;
-  warmup.forEach((w, i) => {
-    const isDone = !!warmupChecks[i];
-    if (isDone) warmDoneCount++;
-    warmupRows += "<div class='task-card warm-card" + (isDone ? " done" : "") + "'>"
-      + "<canvas class='badge-num badge-icon-canvas' width='16' height='16' data-icon='bolt'></canvas>"
-      + "<span class='name'>" + w[0] + "</span>"
-      + "<span class='reps warm-reps'>" + w[1] + "</span>"
-      + "<span class='check-circle warm-check" + (isDone ? " checked" : "") + "' data-wi='" + i + "'>&#10003;</span>"
-      + "</div>";
-  });
+  getExercisesForDate(dateKey).forEach((ex, i) => { totalSets += ex.sets; doneSets += getSetCount(dateKey, i, "main"); });
+  const rows = renderCircuit(dateKey, "main", true);
+  const warmDoneCount = getSetTotals(dateKey, "warm").done;
+  const warmTotalSets = getSetTotals(dateKey, "warm").total;
+  const warmupRows = renderCircuit(dateKey, "warm", true);
 
   const isMainTab = activeTab === "main";
   const tabsHTML =
     "<div class='tab-switch'>" +
-    "<button class='tab-btn warm-tab" + (!isMainTab ? " active" : "") + "' id='warmTabBtn'>Aufwärmen (" + warmDoneCount + "/" + warmup.length + ")</button>" +
+    "<button class='tab-btn warm-tab" + (!isMainTab ? " active" : "") + "' id='warmTabBtn'>Aufwärmen (" + warmDoneCount + "/" + warmTotalSets + ")</button>" +
     "<button class='tab-btn main-tab" + (isMainTab ? " active" : "") + "' id='mainTabBtn'>Übungen (" + doneSets + "/" + totalSets + ")</button>" +
     "</div>";
 
   const listHTML = isMainTab
-    ? "<div class='ex-list'>" + rows + "</div>"
-    : "<div class='ex-list'>" + warmupRows + "</div>";
+    ? "<div class='ex-list" + (beforeStart ? " locked" : "") + "'>" + rows + "</div>"
+    : "<div class='ex-list" + (beforeStart ? " locked" : "") + "'>" + warmupRows + "</div>";
 
   const resetLabel = isMainTab ? "Übungen zurücksetzen" : "Aufwärmen zurücksetzen";
+  const lockHintHTML = beforeStart
+    ? "<div class='lock-hint'>&#128274; Nur Vorschau bis " + pad(startHour) + ":" + pad(startMin) + " Uhr &ndash; Abhaken geht erst, wenn's losgeht</div>"
+    : "";
 
   card.innerHTML =
     "<div class='session-shell'>" +
@@ -2170,23 +2195,23 @@ function render() {
     "<div class='pause-hint'>inkl. kurzer Pause zwischen Aufwärmen und Übungen &nbsp; <button class='change-time-btn' id='changeTimeBtn'>Zeit ändern</button></div>" +
     (inSlot ? "<div class='now-tag'>Training läuft gerade, der Balken links füllt sich</div>" : "") +
     (isPastSession && doneSets < totalSets ? "<div class='done-hint'>Zeit ist vorbei, denk ans Abhaken</div>" : "") +
-    "<div class='progress-row'><span class='progress-text'>" + (isMainTab ? doneSets + " von " + totalSets + " Sätzen" : warmDoneCount + " von " + warmup.length) + " erledigt</span>" +
-    "<button class='reset-btn' id='resetBtn'>" + resetLabel + "</button></div>" +
+    lockHintHTML +
+    "<div class='progress-row'><span class='progress-text'>" + (isMainTab ? doneSets + " von " + totalSets + " Sätzen" : warmDoneCount + " von " + warmTotalSets + " Sätzen") + " erledigt</span>" +
+    "<button class='reset-btn' id='resetBtn'" + (beforeStart ? " disabled" : "") + ">" + resetLabel + "</button></div>" +
     tabsHTML +
     listHTML +
     notesHTML +
     "</div></div>";
 
-  attachCircuitHandlers(card, dateKey);
-  card.querySelectorAll(".check-circle[data-wi]").forEach(box => {
-    box.addEventListener("click", () => toggleWarmupCheck(dateKey, box.dataset.wi));
-  });
+  if (!beforeStart) {
+    attachCircuitHandlers(card, dateKey);
+  }
   const warmTabBtn = document.getElementById("warmTabBtn");
   const mainTabBtn = document.getElementById("mainTabBtn");
   if (warmTabBtn) warmTabBtn.addEventListener("click", () => setTab("warm"));
   if (mainTabBtn) mainTabBtn.addEventListener("click", () => setTab("main"));
   const resetBtn = document.getElementById("resetBtn");
-  if (resetBtn) resetBtn.addEventListener("click", () => {
+  if (resetBtn && !beforeStart) resetBtn.addEventListener("click", () => {
     if (isMainTab) resetDay(dateKey); else resetWarmupDay(dateKey);
   });
   const changeTimeBtn = document.getElementById("changeTimeBtn");
@@ -2463,7 +2488,11 @@ function initSplash() {
       const cnt = typeof val === "number" ? val : (val ? ex.sets : 0);
       if (cnt >= ex.sets) doneMain++;
     });
-    warmup.forEach((_, i) => { if (warm[i]) doneWarm++; });
+    warmup.forEach((w, i) => {
+      const val = warm[i];
+      const cnt = typeof val === "number" ? val : (val ? w.sets : 0);
+      if (cnt >= w.sets) doneWarm++;
+    });
     return doneMain === dayExercises.length && doneWarm === warmup.length;
   }
   function computeSplashStats() {

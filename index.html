@@ -1336,34 +1336,101 @@ let authMode = "login"; // "login" oder "signup"
 function collectSyncData() {
   const out = {};
   SYNC_KEYS.forEach(k => { out[k] = loadJSON(k); });
+  out._mtimes = loadJSON("trainingsplan_mtimes");
   return out;
 }
-function applySyncData(data) {
-  if (!data) return;
-  SYNC_KEYS.forEach(k => { if (data[k] !== undefined) saveJSON(k, data[k]); });
+// Mischt lokalen und Cloud-Stand pro Eintrag: der neuere Zeitstempel gewinnt, Löschungen bleiben erhalten.
+function mergeSyncData(local, cloud) {
+  const lm = local._mtimes || {}, cm = (cloud && cloud._mtimes) || {};
+  const out = { _mtimes: {} };
+  SYNC_KEYS.forEach(k => {
+    const l = local[k] || {}, c = (cloud && cloud[k]) || {};
+    const lmk = lm[k] || {}, cmk = cm[k] || {};
+    const res = {}, rmt = {};
+    new Set([...Object.keys(l), ...Object.keys(c), ...Object.keys(lmk), ...Object.keys(cmk)]).forEach(sub => {
+      const tl = lmk[sub] || 0, tc = cmk[sub] || 0;
+      const hasL = sub in l, hasC = sub in c;
+      let val, has, t;
+      if (tc > tl) { val = c[sub]; has = hasC; t = tc; }
+      else if (tl > tc) { val = l[sub]; has = hasL; t = tl; }
+      else {
+        t = tl;
+        if (hasL && hasC && JSON.stringify(l[sub]) !== JSON.stringify(c[sub])) {
+          // Altdaten ohne Zeitstempel: beide Seiten zusammenführen
+          if (l[sub] && c[sub] && typeof l[sub] === "object" && typeof c[sub] === "object") val = Object.assign({}, c[sub], l[sub]);
+          else val = l[sub];
+          has = true;
+        } else { has = hasL || hasC; val = hasL ? l[sub] : c[sub]; }
+      }
+      if (has) res[sub] = val;
+      if (t) rmt[sub] = t;
+    });
+    out[k] = res;
+    out._mtimes[k] = rmt;
+  });
+  return out;
+}
+function writeSyncDataLocal(data) {
+  try {
+    SYNC_KEYS.forEach(k => localStorage.setItem(k, JSON.stringify(data[k] || {})));
+    localStorage.setItem("trainingsplan_mtimes", JSON.stringify(data._mtimes || {}));
+  } catch (e) {}
 }
 function queueCloudSync() {
   if (!currentUser) return;
   clearTimeout(cloudSyncTimer);
-  cloudSyncTimer = setTimeout(pushToCloud, 1200);
+  cloudSyncTimer = setTimeout(syncWithCloud, 1200);
 }
-async function pushToCloud() {
-  if (!currentUser) return;
+let syncRunning = false, syncAgain = false;
+// Holt den Cloud-Stand, mischt ihn mit dem lokalen und lädt das Ergebnis wieder hoch.
+async function syncWithCloud() {
+  if (!currentUser) return false;
+  if (syncRunning) { syncAgain = true; return false; }
+  syncRunning = true;
+  let changed = false;
   try {
-    await supabaseClient.from("training_data").upsert({
-      user_id: currentUser.id,
-      data: collectSyncData(),
-      updated_at: new Date().toISOString()
-    });
-  } catch (e) { console.error("Cloud-Sync fehlgeschlagen", e); }
+    clearTimeout(cloudSyncTimer);
+    const { data: row, error } = await supabaseClient.from("training_data").select("data").eq("user_id", currentUser.id).maybeSingle();
+    if (error) throw error;
+    const local = collectSyncData();
+    const merged = mergeSyncData(local, row && row.data);
+    changed = JSON.stringify(merged) !== JSON.stringify(local);
+    if (changed) writeSyncDataLocal(merged);
+    const cloudNow = row && row.data ? JSON.stringify(row.data) : "";
+    if (JSON.stringify(merged) !== cloudNow) {
+      const { error: upErr } = await supabaseClient.from("training_data").upsert(
+        { user_id: currentUser.id, data: merged, updated_at: new Date().toISOString() },
+        { onConflict: "user_id" }
+      );
+      if (upErr) throw upErr;
+    }
+  } catch (e) {
+    console.error("Cloud-Sync fehlgeschlagen", e);
+  } finally {
+    syncRunning = false;
+    if (syncAgain) { syncAgain = false; queueCloudSync(); }
+  }
+  return changed;
 }
-async function pullFromCloud() {
+async function pushToCloud() { return syncWithCloud(); }
+async function pullFromCloud() { return syncWithCloud(); }
+
+// Bei Rückkehr in die App neu abgleichen, beim Verlassen ausstehende Änderungen sofort senden.
+let lastSyncPull = 0;
+async function resyncAndRefresh() {
   if (!currentUser) return;
-  try {
-    const { data, error } = await supabaseClient.from("training_data").select("data").eq("user_id", currentUser.id).maybeSingle();
-    if (!error && data && data.data) applySyncData(data.data);
-  } catch (e) { console.error("Cloud-Daten laden fehlgeschlagen", e); }
+  lastSyncPull = Date.now();
+  const changed = await syncWithCloud();
+  const ae = document.activeElement;
+  const typing = ae && (ae.tagName === "TEXTAREA" || ae.tagName === "INPUT");
+  if (changed && !typing && typeof render === "function") render();
 }
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") { if (Date.now() - lastSyncPull > 5000) resyncAndRefresh(); }
+  else if (cloudSyncTimer) { clearTimeout(cloudSyncTimer); syncWithCloud(); }
+});
+window.addEventListener("focus", () => { if (Date.now() - lastSyncPull > 15000) resyncAndRefresh(); });
+setInterval(() => { if (document.visibilityState === "visible" && Date.now() - lastSyncPull > 60000) resyncAndRefresh(); }, 30000);
 
 function showAuthError(msg) {
   const el = document.getElementById("authError");
@@ -1429,6 +1496,9 @@ async function onAuthReady(user) {
   document.getElementById("authSubmitBtn").addEventListener("click", submitAuth);
   document.getElementById("authSwitchBtn").addEventListener("click", () => setAuthMode(authMode === "login" ? "signup" : "login"));
   document.getElementById("accountBtn").addEventListener("click", async () => {
+    await syncWithCloud();
+    try { SYNC_KEYS.concat(["trainingsplan_mtimes"]).forEach(k => localStorage.removeItem(k)); } catch (e) {}
+    currentUser = null;
     await supabaseClient.auth.signOut();
     location.reload();
   });
@@ -1687,6 +1757,16 @@ function loadJSON(key) {
   try { return JSON.parse(localStorage.getItem(key) || "{}"); } catch (e) { return {}; }
 }
 function saveJSON(key, data) {
+  if (SYNC_KEYS.includes(key)) {
+    // Änderungszeit pro Eintrag merken (auch Löschungen), damit der Cloud-Abgleich sauber mischen kann
+    try {
+      const old = loadJSON(key), mt = loadJSON("trainingsplan_mtimes"), now = Date.now();
+      new Set([...Object.keys(old), ...Object.keys(data)]).forEach(k => {
+        if (JSON.stringify(old[k]) !== JSON.stringify(data[k])) { (mt[key] = mt[key] || {})[k] = now; }
+      });
+      localStorage.setItem("trainingsplan_mtimes", JSON.stringify(mt));
+    } catch (e) {}
+  }
   try { localStorage.setItem(key, JSON.stringify(data)); } catch (e) {}
   if (SYNC_KEYS.includes(key)) queueCloudSync();
 }
@@ -2479,6 +2559,9 @@ function initSplash() {
 
   // Datenbasierte Kennzahlen für den Startbildschirm: Wochenfortschritt, Serie, nächste Einheit
   function dayFullyDone(dateKey) {
+    const status = loadJSON("trainingsplan_status")[dateKey] || null;
+    if (status === "success") return true;
+    if (status === "fail") return false;
     const checks = loadJSON("trainingsplan_checks")[dateKey] || {};
     const warm = loadJSON("trainingsplan_warmup")[dateKey] || {};
     const dayExercises = getExercisesForDate(dateKey);
@@ -2502,7 +2585,7 @@ function initSplash() {
     let weekDone = 0, weekTotal = 0;
     for (let i = 0; i < 7; i++) {
       const d = addDays(monday, i);
-      if (isEffectiveTrainDay(d)) {
+      if (d >= planStartDate && isEffectiveTrainDay(d)) {
         weekTotal++;
         if (dayFullyDone(isoDate(d))) weekDone++;
       }

@@ -1367,7 +1367,7 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Diese localStorage-Schlüssel werden mit dem Account in der Cloud synchronisiert.
-const SYNC_KEYS = ["trainingsplan_checks", "trainingsplan_moves", "trainingsplan_notes", "trainingsplan_settimes", "trainingsplan_starttimes", "trainingsplan_status", "trainingsplan_warmup"];
+const SYNC_KEYS = ["trainingsplan_checks", "trainingsplan_moves", "trainingsplan_notes", "trainingsplan_settimes", "trainingsplan_starttimes", "trainingsplan_status", "trainingsplan_warmup", "trainingsplan_traindecision", "trainingsplan_setlogs", "trainingsplan_exfeedback", "trainingsplan_settings", "trainingsplan_badges_seen"];
 
 let currentUser = null;
 let cloudSyncTimer = null;
@@ -1671,6 +1671,149 @@ const dayPlans = {
 };
 const totalPlanExercises = Object.values(dayPlans).reduce((s, p) => s + p.exercises.length, 0);
 
+// Kurze Übungs-Infos (Ausführung, Worauf achten, Muskeln, häufige Fehler) für die
+// Info-Buttons pro Übung – Schlüssel ist exakt der jeweilige Übungsname.
+const EXERCISE_INFO = {
+  "Hampelmänner": {
+    "execution": "Aus dem Stand Arme und Beine gleichzeitig nach außen und wieder zusammenführen.",
+    "watch": "Lockeres, gleichmäßiges Tempo, weiche Knie beim Landen.",
+    "muscles": "Ganzkörper, Herz-Kreislauf-System.",
+    "mistakes": "Zu schnell und verkrampft statt locker – es ist nur zum Aufwärmen."
+  },
+  "Armkreisen vor & zurück": {
+    "execution": "Arme seitlich ausgestreckt in kleinen, dann größeren Kreisen vor- und rückwärts bewegen.",
+    "watch": "Schultern unten lassen, Bewegung kommt aus der Schulter, nicht aus dem Rücken.",
+    "muscles": "Schultern, Rotatorenmanschette.",
+    "mistakes": "Arme zu weit nach oben reißen oder Schwung statt Kontrolle nutzen."
+  },
+  "Schulterkreisen": {
+    "execution": "Schultern locker in großen Kreisen nach vorne, dann nach hinten rollen.",
+    "watch": "Ruhiger Atem, Bewegung bleibt kontrolliert.",
+    "muscles": "Schultergürtel, oberer Rücken.",
+    "mistakes": "Zu hektisch statt bewusst langsam."
+  },
+  "Lockere Kniebeugen": {
+    "execution": "Füße hüftbreit, locker in die Hocke gehen und wieder aufrichten.",
+    "watch": "Knie zeigen in Fußrichtung, Fersen bleiben am Boden.",
+    "muscles": "Oberschenkel, Gesäß.",
+    "mistakes": "Knie fallen nach innen, Rücken rundet sich stark."
+  },
+  "Lockeres Hängen an der Stange": {
+    "execution": "An der Stange mit gestreckten Armen locker hängen lassen.",
+    "watch": "Schultern bewusst entspannen, nicht hochziehen.",
+    "muscles": "Unterarme, Griffkraft, Schultern (Mobilisation).",
+    "mistakes": "Verkrampfter Griff oder hochgezogene Schultern statt lockerem Hängen."
+  },
+  "Klimmzüge (sauber, volle Range)": {
+    "execution": "Obergriff, aus dem Hang bis das Kinn über der Stange ist hochziehen, kontrolliert ablassen.",
+    "watch": "Volle Streckung unten, kein Schwung, Körper bleibt ruhig.",
+    "muscles": "Latissimus, Bizeps, oberer Rücken.",
+    "mistakes": "Nur halbe Range oder Schwungholen (Kipping) statt sauberer Ausführung."
+  },
+  "Liegestütze (Füße erhöht auf Box)": {
+    "execution": "Hände unter den Schultern, Füße erhöht, Körper absenken bis Brust nah am Boden, hochdrücken.",
+    "watch": "Gerade Körperlinie von Kopf bis Ferse, Ellbogen nicht komplett nach außen.",
+    "muscles": "Obere Brust, Schultern, Trizeps.",
+    "mistakes": "Hüfte sackt durch oder Po geht hoch statt gerader Linie."
+  },
+  "Negative Dips (an der niedrigen Bar, 3–4 Sek. Absenkzeit)": {
+    "execution": "Oben starten, sehr langsam (3–4 Sek.) absenken, dann wieder hochsteigen oder neu starten.",
+    "watch": "Ellbogen nah am Körper, Schultern unten, kontrolliertes Tempo halten.",
+    "muscles": "Trizeps, Brust, vordere Schulter.",
+    "mistakes": "Zu schnelles Absenken oder Schultern hochziehen."
+  },
+  "Australian Pull-ups (breiter Griff, an niedriger Stange)": {
+    "execution": "Unter einer niedrigen Stange hängen, Körper gerade, Brust zur Stange ziehen.",
+    "watch": "Körper bleibt starr wie ein Brett, Ellbogen ziehen nach hinten unten.",
+    "muscles": "Oberer Rücken, hintere Schulter, Bizeps.",
+    "mistakes": "Hüfte durchhängen lassen statt Körperspannung zu halten."
+  },
+  "Bulgarian Split Squats (hinterer Fuß auf Box)": {
+    "execution": "Hinteren Fuß auf einer Box ablegen, vorderes Bein tief beugen, wieder hochdrücken.",
+    "watch": "Oberkörper aufrecht, vorderes Knie zeigt über den Fußspitzen nicht weit hinaus.",
+    "muscles": "Oberschenkel, Gesäß.",
+    "mistakes": "Zu kurze Schrittstellung oder Knie kippt nach innen."
+  },
+  "Plank": {
+    "execution": "Unterarmstütz, Körper von Kopf bis Ferse in einer Linie halten.",
+    "watch": "Bauch und Gesäß anspannen, Rücken nicht durchhängen lassen.",
+    "muscles": "Rumpf, Bauch, unterer Rücken.",
+    "mistakes": "Hüfte sackt durch oder wird zu hoch gedrückt."
+  },
+  "Chin-ups (Untergriff, eng)": {
+    "execution": "Enger Untergriff, aus dem Hang hochziehen bis Kinn über der Stange, kontrolliert ablassen.",
+    "watch": "Volle Streckung unten, Ellbogen nah am Körper.",
+    "muscles": "Bizeps, Latissimus.",
+    "mistakes": "Schwung statt sauberer Zugbewegung."
+  },
+  "Archer Push-ups (oder erhöhte Liegestütze, falls zu schwer)": {
+    "execution": "Breiter Stand der Hände, Körper zu einer Seite absenken, der andere Arm bleibt fast gestreckt.",
+    "watch": "Körperspannung halten, Bewegung abwechselnd auf beide Seiten.",
+    "muscles": "Brust, Trizeps, Schultern (einseitig betont).",
+    "mistakes": "Hüfte dreht mit statt gerade zu bleiben."
+  },
+  "Negative Dips (Ziel: Absenkzeit steigern auf 5 Sek.)": {
+    "execution": "Oben starten, möglichst gleichmäßig auf Zielzeit absenken, dann neu starten.",
+    "watch": "Tempo bewusst zählen, Schultern unten lassen.",
+    "muscles": "Trizeps, Brust, vordere Schulter.",
+    "mistakes": "Am Ende der Bewegung schneller werden statt gleichmäßig zu bleiben."
+  },
+  "Monkey Bar Hangeln (so weit wie möglich, Skill)": {
+    "execution": "Von Sprosse zu Sprosse hangeln, so weit wie es sicher geht.",
+    "watch": "Kontrollierter Griffwechsel, Schultern aktiv, nicht nur hängen lassen.",
+    "muscles": "Griffkraft, Schultern, Rumpf.",
+    "mistakes": "Unkontrolliertes Schwingen statt sauberem Griffwechsel."
+  },
+  "Ausfallschritte (gehend oder Bulgarian Split Squat)": {
+    "execution": "Großer Schritt nach vorne, hinteres Knie Richtung Boden senken, hochdrücken und Bein wechseln.",
+    "watch": "Oberkörper aufrecht, vorderes Knie bleibt stabil über dem Fuß.",
+    "muscles": "Oberschenkel, Gesäß.",
+    "mistakes": "Zu kleiner Schritt oder Knie kippt nach innen."
+  },
+  "Hanging Knee Raises (an der Klimmzugstange)": {
+    "execution": "An der Stange hängen, Knie kontrolliert zur Brust ziehen, langsam absenken.",
+    "watch": "Kein Schwung, Bewegung kommt aus der Bauchmuskulatur.",
+    "muscles": "Bauch (v.a. unterer Bereich), Hüftbeuger.",
+    "mistakes": "Schwungholen mit dem ganzen Körper statt kontrollierter Bewegung."
+  },
+  "Wide Grip Pull-ups": {
+    "execution": "Breiter Obergriff, aus dem Hang hochziehen, kontrolliert ablassen.",
+    "watch": "Volle Streckung unten, Schultern nicht hochziehen.",
+    "muscles": "Latissimus (breit), oberer Rücken.",
+    "mistakes": "Zu enger Griff (dann ist es kein Wide Grip mehr) oder halbe Range."
+  },
+  "Diamond Push-ups": {
+    "execution": "Hände bilden unter der Brust eine Raute, Körper absenken und hochdrücken.",
+    "watch": "Ellbogen nah am Körper, gerade Körperlinie.",
+    "muscles": "Trizeps, innere Brust.",
+    "mistakes": "Hüfte sackt durch oder Ellbogen gehen weit nach außen."
+  },
+  "Negative Ring-Dips (an den Ringen, Skill-Aufbau)": {
+    "execution": "Oben an den Ringen starten, langsam und kontrolliert absenken.",
+    "watch": "Ringe möglichst ruhig halten, Schultern unten, nicht einknicken.",
+    "muscles": "Trizeps, Brust, Schultern, zusätzlich Stabilisation.",
+    "mistakes": "Ringe wackeln unkontrolliert statt ruhig geführt zu werden."
+  },
+  "Pull-Up Ladder (dynamisches Hangeln, Skill)": {
+    "execution": "Dynamisch zwischen Klimmzugpositionen wechseln bzw. hangeln, so kontrolliert wie möglich.",
+    "watch": "Griff sicher, kontrollierte Bewegung statt wildem Schwingen.",
+    "muscles": "Latissimus, Griffkraft, Schultern.",
+    "mistakes": "Unkontrollierte, ruckartige Bewegungen."
+  },
+  "Pistol-Squat-Progression (an der Box, Hand zum Festhalten)": {
+    "execution": "Auf einem Bein zu einer Box absenken, leicht mit der Hand abstützen, wieder hochdrücken.",
+    "watch": "Knie bleibt stabil in Fußrichtung, kontrolliertes Tempo.",
+    "muscles": "Oberschenkel, Gesäß, Rumpf (Balance).",
+    "mistakes": "Knie kippt nach innen oder Gewicht komplett auf die Stützhand verlagern."
+  },
+  "Side Plank": {
+    "execution": "Seitlich auf dem Unterarm abstützen, Körper von Kopf bis Fuß in einer Linie anheben.",
+    "watch": "Hüfte nicht absacken lassen, Blick und Körper bleiben stabil.",
+    "muscles": "Seitliche Bauchmuskeln (schräge Bauchmuskulatur).",
+    "mistakes": "Hüfte sackt durch oder Körper dreht sich nach vorne/hinten."
+  }
+};
+
 // Ermittelt, zu welchem Basis-Wochentag (0=Mo, 2=Mi, 4=Fr) ein Datum gehört –
 // bei verlegten Tagen zählt der ursprüngliche Wochentag, nicht der neue.
 function getPlanIndexForDate(dateKey) {
@@ -1871,6 +2014,145 @@ function isEffectiveTrainDay(d) {
   if (baseTrain) return true;
   return !!getMoveSourceFromMoves(moves, key);
 }
+
+// ====== Folgetag-Abfrage nach Verschiebungen ======
+// Ein Datum braucht die "Willst du trotzdem trainieren?"-Frage, wenn es selbst ein
+// effektiver Trainingstag ist UND der Tag davor (z.B. durch eine Verschiebung) auch einer ist.
+function needsFollowupDecision(dateKey) {
+  const parts = dateKey.split("-").map(Number);
+  const d = new Date(parts[0], parts[1] - 1, parts[2]);
+  if (!isEffectiveTrainDay(d)) return false;
+  return isEffectiveTrainDay(addDays(d, -1));
+}
+function loadTrainDecisions() { return loadJSON("trainingsplan_traindecision"); }
+function getTrainDecision(dateKey) { return loadTrainDecisions()[dateKey] || null; }
+function setTrainDecision(dateKey, decision) {
+  const data = loadTrainDecisions();
+  if (decision === null) delete data[dateKey];
+  else data[dateKey] = decision;
+  saveJSON("trainingsplan_traindecision", data);
+}
+// Ob ein Datum für Serie/Statistik zählt: effektiver Trainingstag, der nicht per
+// Folgetag-Abfrage bewusst als Pause abgewählt wurde.
+function isCountedTrainDay(d) {
+  if (!isEffectiveTrainDay(d)) return false;
+  return getTrainDecision(isoDate(d)) !== "no";
+}
+
+// ====== Gewichte & Wiederholungen pro Satz (nur Hauptübungen) ======
+function loadSetLogs() { return loadJSON("trainingsplan_setlogs"); }
+function getSetLog(dateKey, exIdx, setIdx) {
+  const day = loadSetLogs()[dateKey];
+  const ex = day && day[exIdx];
+  return (ex && ex[setIdx]) || null;
+}
+function saveSetLog(dateKey, exIdx, setIdx, weight, reps) {
+  const data = loadSetLogs();
+  if (!data[dateKey]) data[dateKey] = {};
+  if (!data[dateKey][exIdx]) data[dateKey][exIdx] = {};
+  data[dateKey][exIdx][setIdx] = { weight: weight, reps: reps };
+  saveJSON("trainingsplan_setlogs", data);
+}
+// Sucht rückwärts ab (aber ohne) dem übergebenen Datum den letzten geloggten Satz mit
+// diesem Index für dieselbe Übung (per Name, da der Index nur je Tagesplan stabil ist).
+function findLastSetLog(beforeDateKey, exerciseName, setIdx) {
+  const logs = loadSetLogs();
+  const dateKeys = Object.keys(logs).filter(k => k < beforeDateKey).sort().reverse();
+  for (const dk of dateKeys) {
+    const exList = getExercisesForDate(dk);
+    const exIdx = exList.findIndex(e => e.name === exerciseName);
+    if (exIdx === -1) continue;
+    const exLogs = logs[dk][exIdx];
+    if (!exLogs) continue;
+    if (exLogs[setIdx]) return { dateKey: dk, weight: exLogs[setIdx].weight, reps: exLogs[setIdx].reps };
+    const anySet = Object.values(exLogs).find(v => v);
+    if (anySet) return { dateKey: dk, weight: anySet.weight, reps: anySet.reps };
+  }
+  return null;
+}
+// Bestwerte einer Übung über die gesamte Historie: höchstes Gewicht, beste Wdh., bestes Volumen
+// (Gewicht × Wdh., pro Tag summiert über alle Sätze dieser Übung).
+function getExerciseBests(exerciseName) {
+  const logs = loadSetLogs();
+  let bestWeight = null, bestReps = null, bestVolume = null;
+  Object.keys(logs).forEach(dk => {
+    const exList = getExercisesForDate(dk);
+    const exIdx = exList.findIndex(e => e.name === exerciseName);
+    if (exIdx === -1) return;
+    const exLogs = logs[dk][exIdx];
+    if (!exLogs) return;
+    let dayVolume = 0;
+    Object.values(exLogs).forEach(set => {
+      if (!set) return;
+      const w = typeof set.weight === "number" ? set.weight : 0;
+      const r = typeof set.reps === "number" ? set.reps : 0;
+      if (typeof set.weight === "number" && (bestWeight === null || set.weight > bestWeight)) bestWeight = set.weight;
+      if (typeof set.reps === "number" && (bestReps === null || set.reps > bestReps)) bestReps = set.reps;
+      dayVolume += w * r;
+    });
+    if (dayVolume > 0 && (bestVolume === null || dayVolume > bestVolume)) bestVolume = dayVolume;
+  });
+  return { weight: bestWeight, reps: bestReps, volume: bestVolume };
+}
+
+// ====== Bewertung je Übung (Einfach/Passt/Schwer/Nicht geschafft) ======
+function loadExFeedback() { return loadJSON("trainingsplan_exfeedback"); }
+function getExFeedback(dateKey, exIdx) {
+  const day = loadExFeedback()[dateKey];
+  return (day && day[exIdx]) || null;
+}
+function setExFeedback(dateKey, exIdx, rating) {
+  const data = loadExFeedback();
+  if (!data[dateKey]) data[dateKey] = {};
+  data[dateKey][exIdx] = rating;
+  saveJSON("trainingsplan_exfeedback", data);
+}
+// Letzte Bewertungen einer Übung (neueste zuerst), über die Historie hinweg per Name gesucht.
+function getRecentExFeedback(exerciseName, limit) {
+  const feedback = loadExFeedback();
+  const dateKeys = Object.keys(feedback).sort().reverse();
+  const out = [];
+  for (const dk of dateKeys) {
+    const exList = getExercisesForDate(dk);
+    const exIdx = exList.findIndex(e => e.name === exerciseName);
+    if (exIdx === -1) continue;
+    const rating = feedback[dk][exIdx];
+    if (rating) out.push(rating);
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+// Progressions-Vorschlag: rein informativ, ändert nie automatisch einen Wert.
+function getProgressionSuggestion(exerciseName) {
+  const recent = getRecentExFeedback(exerciseName, 2);
+  if (recent.length === 0) return null;
+  if (recent[0] === "easy" && recent[1] === "easy") {
+    return { direction: "up", text: "Vorschlag: etwas mehr Gewicht oder Wdh. – zuletzt zweimal „einfach“." };
+  }
+  if (recent[0] === "hard" || recent[0] === "failed") {
+    return { direction: "down", text: "Vorschlag: gleich lassen oder etwas reduzieren – zuletzt anstrengend." };
+  }
+  return { direction: "same", text: "Vorschlag: Gewicht/Wdh. beibehalten." };
+}
+
+// ====== Einstellungen (z.B. Ton beim Pausen-Timer) ======
+const DEFAULT_SETTINGS = { restSoundEnabled: true };
+function loadSettings() { return Object.assign({}, DEFAULT_SETTINGS, loadJSON("trainingsplan_settings")); }
+function setSetting(key, value) {
+  const data = loadJSON("trainingsplan_settings");
+  data[key] = value;
+  saveJSON("trainingsplan_settings", data);
+}
+
+// ====== Abzeichen: welche wurden schon als "neu freigeschaltet" angezeigt ======
+function loadBadgesSeen() { return loadJSON("trainingsplan_badges_seen"); }
+function isBadgeSeen(id) { return !!loadBadgesSeen()[id]; }
+function markBadgeSeen(id) {
+  const data = loadBadgesSeen();
+  data[id] = true;
+  saveJSON("trainingsplan_badges_seen", data);
+}
+
 function formatDateLabel(dateKeyStr) {
   const parts = dateKeyStr.split("-").map(Number);
   const d = new Date(parts[0], parts[1] - 1, parts[2]);

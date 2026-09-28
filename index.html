@@ -573,6 +573,18 @@
   }
   .recap-empty { font-size: 12.5px; color: var(--muted); line-height: 1.5; margin-top: 16px; }
 
+  .badge-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .badge-card {
+    display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px;
+    background: var(--bg-alt-2); border: 1px solid var(--line-soft);
+    border-radius: 16px; padding: 16px 10px;
+  }
+  .badge-card.unlocked { border-color: rgba(var(--cobalt-rgb),0.35); }
+  .badge-card.locked { opacity: 0.5; }
+  .badge-icon { font-size: 26px; line-height: 1; margin-bottom: 4px; }
+  .badge-label { font-size: 12.5px; font-weight: 700; color: var(--ink); }
+  .badge-desc { font-size: 10.5px; color: var(--muted); line-height: 1.35; }
+
   .week-nav {
     display: flex;
     align-items: center;
@@ -1498,6 +1510,11 @@
           <span class="menu-item-label">Wochenrückblick</span>
           <span class="menu-item-chev">&#8250;</span>
         </button>
+        <button class="menu-item" id="menuBadgesBtn">
+          <span class="menu-item-icon">&#127894;</span>
+          <span class="menu-item-label">Abzeichen</span>
+          <span class="menu-item-chev">&#8250;</span>
+        </button>
       </div>
     </div>
   </div>
@@ -1530,6 +1547,16 @@
       <button class="info-close-btn" id="recapCloseBtn" aria-label="Schließen">&times;</button>
     </div>
     <div class="info-sheet-body" id="recapBody"></div>
+  </div>
+</div>
+
+<div class="info-overlay" id="badgesOverlay">
+  <div class="info-sheet">
+    <div class="info-sheet-head">
+      <div class="info-sheet-title">Abzeichen</div>
+      <button class="info-close-btn" id="badgesCloseBtn" aria-label="Schließen">&times;</button>
+    </div>
+    <div class="info-sheet-body" id="badgesBody"></div>
   </div>
 </div>
 
@@ -2616,6 +2643,7 @@ function finishRunning(dateKey, exIdx, setIdx, kind) {
   if (ex) maybeStartRestAfterSet(dateKey, kind, ex);
   if (newRecord && ex) showPRToast(ex.name, newRecord);
   if (ex) maybeAskExFeedback(dateKey, kind, exIdx, ex);
+  checkForNewBadges();
 }
 // Vergleicht Bestwerte vor/nach einem Satz; gibt null zurück, wenn es (noch) nichts zu
 // vergleichen gab (allererster Eintrag) oder sich nichts verbessert hat.
@@ -2807,6 +2835,7 @@ function setDayStatus(dateKey, status) {
   saveJSON("trainingsplan_status", data);
   justSubmittedStatusKey = status ? dateKey : null;
   render();
+  if (status) checkForNewBadges();
 }
 // Verlegt das Training von sourceKey auf targetKey. Schlägt fehl (mit Hinweis), wenn am
 // Zieltag bereits Training stattfindet.
@@ -3502,6 +3531,13 @@ const menuRecapBtn = document.getElementById("menuRecapBtn");
 if (menuRecapBtn && menuSheet && recapSheet) {
   menuRecapBtn.addEventListener("click", () => { menuSheet.close(); recapSheet.open(); });
 }
+const badgesSheet = initSheet(null, "badgesOverlay", "badgesCloseBtn", () => {
+  document.getElementById("badgesBody").innerHTML = renderBadgesContent();
+});
+const menuBadgesBtn = document.getElementById("menuBadgesBtn");
+if (menuBadgesBtn && menuSheet && badgesSheet) {
+  menuBadgesBtn.addEventListener("click", () => { menuSheet.close(); badgesSheet.open(); });
+}
 // Sonntags einmal pro Woche automatisch zeigen (rein lokaler Marker, kein Sync nötig).
 (function maybeAutoShowWeeklyRecap() {
   if (!recapSheet) return;
@@ -3721,6 +3757,67 @@ function renderWeeklyRecapContent(weekOffsetForRecap) {
     html += "<div class='recap-empty'>Noch keine Gewichte/Wdh. geloggt &ndash; sobald du welche einträgst, siehst du hier Rekorde und Fortschritt.</div>";
   }
   return html;
+}
+
+// ====== Abzeichen ======
+const BADGES = [
+  { id: "streak3", icon: "🔥", label: "3er Serie", desc: "3 Trainingstage am Stück geschafft", check: s => s.longestStreak >= 3 },
+  { id: "streak5", icon: "🔥", label: "5er Serie", desc: "5 Trainingstage am Stück geschafft", check: s => s.longestStreak >= 5 },
+  { id: "streak10", icon: "🔥", label: "10er Serie", desc: "10 Trainingstage am Stück geschafft", check: s => s.longestStreak >= 10 },
+  { id: "units10", icon: "💪", label: "10 Einheiten", desc: "10 Trainingseinheiten abgeschlossen", check: s => s.completed >= 10 },
+  { id: "units25", icon: "💪", label: "25 Einheiten", desc: "25 Trainingseinheiten abgeschlossen", check: s => s.completed >= 25 },
+  { id: "units50", icon: "💪", label: "50 Einheiten", desc: "50 Trainingseinheiten abgeschlossen", check: s => s.completed >= 50 },
+  { id: "firstRecord", icon: "🏆", label: "Erster Rekord", desc: "Erstes Gewicht oder Wdh. geloggt", check: s => s.hasAnySetLog },
+  { id: "perfectWeek", icon: "✨", label: "Perfekte Woche", desc: "Eine ganze Woche komplett geschafft", check: s => s.hasAnyPerfectWeek }
+];
+function hasAnySetLog() {
+  const logs = loadSetLogs();
+  return Object.values(logs).some(day => Object.values(day).some(ex =>
+    Object.values(ex).some(set => set && (typeof set.weight === "number" || typeof set.reps === "number"))
+  ));
+}
+// Nur vollständig abgeschlossene Wochen (Sonntag bereits vorbei) zählen als "perfekt",
+// damit eine gerade erst begonnene gute Woche nicht vorzeitig das Abzeichen auslöst.
+function hasAnyPerfectWeek() {
+  const realToday = new Date();
+  const today = new Date(realToday.getFullYear(), realToday.getMonth(), realToday.getDate());
+  let monday = getMonday(planStartDate);
+  while (addDays(monday, 6) < today) {
+    let done = 0, total = 0;
+    for (let i = 0; i < 7; i++) {
+      const d = addDays(monday, i);
+      if (d < planStartDate) continue;
+      if (isCountedTrainDay(d)) { total++; if (dayFullyDone(isoDate(d))) done++; }
+    }
+    if (total > 0 && done === total) return true;
+    monday = addDays(monday, 7);
+  }
+  return false;
+}
+function getBadgeStatus() {
+  const stats = computeFullStats();
+  stats.hasAnySetLog = hasAnySetLog();
+  stats.hasAnyPerfectWeek = hasAnyPerfectWeek();
+  return BADGES.map(b => Object.assign({}, b, { unlocked: b.check(stats) }));
+}
+function renderBadgesContent() {
+  const statuses = getBadgeStatus();
+  return "<div class='badge-grid'>" + statuses.map(b =>
+    "<div class='badge-card" + (b.unlocked ? " unlocked" : " locked") + "'>"
+    + "<div class='badge-icon'>" + (b.unlocked ? b.icon : "&#128274;") + "</div>"
+    + "<div class='badge-label'>" + b.label + "</div>"
+    + "<div class='badge-desc'>" + b.desc + "</div>"
+    + "</div>"
+  ).join("") + "</div>";
+}
+// Nach einer Fortschrittsänderung prüfen, ob ein neues Abzeichen freigeschaltet wurde – zeigt
+// höchstens eins pro Aufruf an, damit es nicht mit mehreren Toasts überschwemmt.
+function checkForNewBadges() {
+  const seen = loadBadgesSeen();
+  const newlyUnlocked = getBadgeStatus().find(b => b.unlocked && !seen[b.id]);
+  if (!newlyUnlocked) return;
+  markBadgeSeen(newlyUnlocked.id);
+  showToast(newlyUnlocked.icon + " Abzeichen freigeschaltet: " + newlyUnlocked.label);
 }
 
 function initSplash() {

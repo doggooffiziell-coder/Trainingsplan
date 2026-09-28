@@ -1515,6 +1515,11 @@
           <span class="menu-item-label">Abzeichen</span>
           <span class="menu-item-chev">&#8250;</span>
         </button>
+        <button class="menu-item" id="menuDataBtn">
+          <span class="menu-item-icon">&#128190;</span>
+          <span class="menu-item-label">Daten</span>
+          <span class="menu-item-chev">&#8250;</span>
+        </button>
       </div>
     </div>
   </div>
@@ -1557,6 +1562,33 @@
       <button class="info-close-btn" id="badgesCloseBtn" aria-label="Schließen">&times;</button>
     </div>
     <div class="info-sheet-body" id="badgesBody"></div>
+  </div>
+</div>
+
+<div class="info-overlay" id="dataOverlay">
+  <div class="info-sheet">
+    <div class="info-sheet-head">
+      <div class="info-sheet-title">Daten</div>
+      <button class="info-close-btn" id="dataCloseBtn" aria-label="Schließen">&times;</button>
+    </div>
+    <div class="info-sheet-body">
+      <div class="menu-list">
+        <button class="menu-item" id="dataExportJsonBtn">
+          <span class="menu-item-icon">&#128229;</span>
+          <span class="menu-item-label">Als JSON exportieren</span>
+        </button>
+        <button class="menu-item" id="dataExportCsvBtn">
+          <span class="menu-item-icon">&#128202;</span>
+          <span class="menu-item-label">Gewichte als CSV exportieren</span>
+        </button>
+        <button class="menu-item" id="dataImportBtn">
+          <span class="menu-item-icon">&#128228;</span>
+          <span class="menu-item-label">Aus JSON importieren</span>
+        </button>
+        <input type="file" id="dataImportInput" accept="application/json,.json" style="display:none;">
+      </div>
+      <div class="info-block-text">Die JSON-Sicherung enthält alle deine Daten (Haken, Notizen, Gewichte, Zeiten &hellip;) und kann später hier wieder eingelesen werden. Die CSV eignet sich zum Auswerten der Gewichte/Wiederholungen z.B. in einer Tabelle.</div>
+    </div>
   </div>
 </div>
 
@@ -2865,6 +2897,77 @@ function undoMove(sourceKey) {
   }
   render();
 }
+// ====== Datenexport/-import ======
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+function exportDataJSON() {
+  const data = collectSyncData();
+  data._exportedAt = new Date().toISOString();
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  downloadBlob(blob, "trainingsplan-backup-" + isoDate(new Date()) + ".json");
+}
+function csvEscape(val) {
+  if (/[",\r\n]/.test(val)) return '"' + val.replace(/"/g, '""') + '"';
+  return val;
+}
+function exportDataCSV() {
+  const logs = loadSetLogs();
+  const rows = [["Datum", "Übung", "Satz", "Gewicht (kg)", "Wiederholungen"]];
+  Object.keys(logs).sort().forEach(dk => {
+    const exList = getExercisesForDate(dk);
+    Object.keys(logs[dk]).forEach(exIdxStr => {
+      const ex = exList[parseInt(exIdxStr, 10)];
+      if (!ex) return;
+      const sets = logs[dk][exIdxStr];
+      Object.keys(sets).sort((a, b) => a - b).forEach(setIdxStr => {
+        const set = sets[setIdxStr];
+        if (!set) return;
+        rows.push([dk, ex.name, String(parseInt(setIdxStr, 10) + 1),
+          typeof set.weight === "number" ? String(set.weight) : "",
+          typeof set.reps === "number" ? String(set.reps) : ""]);
+      });
+    });
+  });
+  const csv = rows.map(r => r.map(csvEscape).join(",")).join("\r\n");
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+  downloadBlob(blob, "trainingsplan-gewichte-" + isoDate(new Date()) + ".csv");
+}
+// Stempelt alle Einträge einer importierten Sicherung auf "jetzt", damit sie beim nächsten
+// Cloud-Abgleich als neuester Stand gewinnt statt an alten, mitgelieferten Zeitstempeln zu hängen.
+function stampAllMtimes(data) {
+  const now = Date.now();
+  const mt = {};
+  SYNC_KEYS.forEach(k => {
+    const sub = data[k] || {};
+    mt[k] = {};
+    Object.keys(sub).forEach(subKey => { mt[k][subKey] = now; });
+  });
+  data._mtimes = mt;
+  return data;
+}
+function importDataJSON(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    let parsed;
+    try { parsed = JSON.parse(reader.result); } catch (e) { alert("Diese Datei ist keine gültige Sicherung."); return; }
+    const looksValid = SYNC_KEYS.some(k => k in parsed);
+    if (!looksValid) { alert("Diese Datei enthält keine erkennbaren Trainingsplan-Daten."); return; }
+    if (!confirm("Bestehende Daten auf diesem Gerät werden durch die Sicherung ersetzt. Fortfahren?")) return;
+    writeSyncDataLocal(stampAllMtimes(parsed));
+    render();
+    if (currentUser) syncWithCloud().then(() => render());
+    alert("Daten wurden importiert.");
+  };
+  reader.readAsText(file);
+}
+
 let saveTimer = null;
 function saveNote(dateKey, text) {
   const data = loadJSON("trainingsplan_notes");
@@ -3537,6 +3640,25 @@ const badgesSheet = initSheet(null, "badgesOverlay", "badgesCloseBtn", () => {
 const menuBadgesBtn = document.getElementById("menuBadgesBtn");
 if (menuBadgesBtn && menuSheet && badgesSheet) {
   menuBadgesBtn.addEventListener("click", () => { menuSheet.close(); badgesSheet.open(); });
+}
+const dataSheet = initSheet(null, "dataOverlay", "dataCloseBtn");
+const menuDataBtn = document.getElementById("menuDataBtn");
+if (menuDataBtn && menuSheet && dataSheet) {
+  menuDataBtn.addEventListener("click", () => { menuSheet.close(); dataSheet.open(); });
+}
+const dataExportJsonBtn = document.getElementById("dataExportJsonBtn");
+if (dataExportJsonBtn) dataExportJsonBtn.addEventListener("click", exportDataJSON);
+const dataExportCsvBtn = document.getElementById("dataExportCsvBtn");
+if (dataExportCsvBtn) dataExportCsvBtn.addEventListener("click", exportDataCSV);
+const dataImportBtn = document.getElementById("dataImportBtn");
+const dataImportInput = document.getElementById("dataImportInput");
+if (dataImportBtn && dataImportInput) {
+  dataImportBtn.addEventListener("click", () => dataImportInput.click());
+  dataImportInput.addEventListener("change", () => {
+    const file = dataImportInput.files && dataImportInput.files[0];
+    if (file) importDataJSON(file);
+    dataImportInput.value = "";
+  });
 }
 // Sonntags einmal pro Woche automatisch zeigen (rein lokaler Marker, kein Sync nötig).
 (function maybeAutoShowWeeklyRecap() {

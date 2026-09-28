@@ -551,6 +551,15 @@
   .best-chart { flex-shrink: 0; width: 90px; height: 28px; color: var(--cobalt-light); }
   .best-chart svg { display: block; width: 100%; height: 100%; }
 
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat-card { background: var(--bg-alt-2); border: 1px solid var(--line-soft); border-radius: 14px; padding: 14px; }
+  .stat-card-value { font-size: 21px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .stat-card-label { font-size: 11px; color: var(--muted); margin-top: 3px; font-weight: 600; }
+  .stat-chart-block { margin-top: 4px; }
+  .stat-chart-title { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 8px; }
+  .stat-chart { width: 100%; height: 50px; color: var(--cobalt-light); }
+  .stat-chart svg { display: block; width: 100%; height: 100%; }
+
   .week-nav {
     display: flex;
     align-items: center;
@@ -1461,6 +1470,11 @@
     </div>
     <div class="info-sheet-body">
       <div class="menu-list">
+        <button class="menu-item" id="menuStatistikBtn">
+          <span class="menu-item-icon">&#128202;</span>
+          <span class="menu-item-label">Statistik</span>
+          <span class="menu-item-chev">&#8250;</span>
+        </button>
         <button class="menu-item" id="menuBestwerteBtn">
           <span class="menu-item-icon">&#127942;</span>
           <span class="menu-item-label">Bestwerte</span>
@@ -1478,6 +1492,16 @@
       <button class="info-close-btn" id="bestwerteCloseBtn" aria-label="Schließen">&times;</button>
     </div>
     <div class="info-sheet-body" id="bestwerteBody"></div>
+  </div>
+</div>
+
+<div class="info-overlay" id="statistikOverlay">
+  <div class="info-sheet">
+    <div class="info-sheet-head">
+      <div class="info-sheet-title">Statistik</div>
+      <button class="info-close-btn" id="statistikCloseBtn" aria-label="Schließen">&times;</button>
+    </div>
+    <div class="info-sheet-body" id="statistikBody"></div>
   </div>
 </div>
 
@@ -3429,6 +3453,13 @@ const menuBestwerteBtn = document.getElementById("menuBestwerteBtn");
 if (menuBestwerteBtn && menuSheet && bestwerteSheet) {
   menuBestwerteBtn.addEventListener("click", () => { menuSheet.close(); bestwerteSheet.open(); });
 }
+const statistikSheet = initSheet(null, "statistikOverlay", "statistikCloseBtn", () => {
+  document.getElementById("statistikBody").innerHTML = renderStatistikContent();
+});
+const menuStatistikBtn = document.getElementById("menuStatistikBtn");
+if (menuStatistikBtn && menuSheet && statistikSheet) {
+  menuStatistikBtn.addEventListener("click", () => { menuSheet.close(); statistikSheet.open(); });
+}
 
 // Bewertungs-Sheet: erscheint nach dem letzten Satz einer Hauptübung, überspringbar durch
 // Antippen daneben oder das Schließen-Kreuz – ohne Auswahl wird nichts gespeichert.
@@ -3449,6 +3480,129 @@ function maybeAskExFeedback(dateKey, kind, exIdx, ex) {
   pendingFeedback = { dateKey, exIdx };
   document.getElementById("exFeedbackName").textContent = ex.name;
   exFeedbackSheet.open();
+}
+
+// Ob ein Tag vollständig erledigt ist: expliziter Status hat Vorrang, sonst zählen die
+// abgehakten Sätze (Haupt + Aufwärmen).
+function dayFullyDone(dateKey) {
+  const status = loadJSON("trainingsplan_status")[dateKey] || null;
+  if (status === "success") return true;
+  if (status === "fail") return false;
+  const checks = loadJSON("trainingsplan_checks")[dateKey] || {};
+  const warm = loadJSON("trainingsplan_warmup")[dateKey] || {};
+  const dayExercises = getExercisesForDate(dateKey);
+  let doneMain = 0, doneWarm = 0;
+  dayExercises.forEach((ex, i) => {
+    const val = checks[i];
+    const cnt = typeof val === "number" ? val : (val ? ex.sets : 0);
+    if (cnt >= ex.sets) doneMain++;
+  });
+  warmup.forEach((w, i) => {
+    const val = warm[i];
+    const cnt = typeof val === "number" ? val : (val ? w.sets : 0);
+    if (cnt >= w.sets) doneWarm++;
+  });
+  return doneMain === dayExercises.length && doneWarm === warmup.length;
+}
+
+// ====== Gesamtstatistik ======
+// Läuft einmal chronologisch von Planstart bis heute über alle gezählten Trainingstage
+// (isCountedTrainDay schließt per Folgetag-Abfrage abgewählte Tage aus), damit nichts
+// doppelt oder gar nicht in Serie/Erfolgsquote/Wochenverlauf einfließt.
+function computeFullStats() {
+  const today = new Date();
+  const realToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const statusMap = loadJSON("trainingsplan_status");
+
+  let completed = 0, totalDays = 0, successDays = 0, judgedDays = 0;
+  let totalSets = 0, totalDurationSec = 0, longestStreak = 0, runStreak = 0;
+  const weekBuckets = [];
+  let weekCursor = null, weekDone = 0, weekTotal = 0;
+
+  let cursor = new Date(planStartDate);
+  while (cursor <= realToday) {
+    if (isCountedTrainDay(cursor)) {
+      const key = isoDate(cursor);
+      totalDays++;
+      const done = dayFullyDone(key);
+      if (done) completed++;
+      const status = statusMap[key];
+      if (status === "success") { successDays++; judgedDays++; }
+      else if (status === "fail") { judgedDays++; }
+
+      getExercisesForDate(key).forEach((ex, i) => { totalSets += getSetCount(key, i, "main"); });
+      warmup.forEach((w, i) => { totalSets += getSetCount(key, i, "warm"); });
+
+      const settimes = loadJSON("trainingsplan_settimes")[key] || {};
+      Object.values(settimes).forEach(exTimes => {
+        Object.values(exTimes || {}).forEach(sec => { if (typeof sec === "number") totalDurationSec += sec; });
+      });
+
+      if (done) { runStreak++; if (runStreak > longestStreak) longestStreak = runStreak; }
+      else runStreak = 0;
+
+      const wKey = isoDate(getMonday(cursor));
+      if (wKey !== weekCursor) {
+        if (weekCursor !== null) weekBuckets.push({ done: weekDone, total: weekTotal });
+        weekCursor = wKey; weekDone = 0; weekTotal = 0;
+      }
+      weekTotal++;
+      if (done) weekDone++;
+    }
+    cursor = addDays(cursor, 1);
+  }
+  if (weekCursor !== null) weekBuckets.push({ done: weekDone, total: weekTotal });
+
+  let currentStreak = 0, streakCursor = new Date(realToday);
+  for (let i = 0; i < 730; i++) {
+    if (streakCursor < planStartDate) break;
+    if (isCountedTrainDay(streakCursor)) {
+      const key = isoDate(streakCursor);
+      if (dayFullyDone(key)) currentStreak++;
+      else if (!sameDate(streakCursor, realToday)) break;
+    }
+    streakCursor = addDays(streakCursor, -1);
+  }
+  if (currentStreak > longestStreak) longestStreak = currentStreak;
+
+  return {
+    completed, totalDays,
+    successRate: judgedDays > 0 ? Math.round((successDays / judgedDays) * 100) : null,
+    currentStreak, longestStreak, totalSets, totalDurationSec,
+    weekBuckets: weekBuckets.slice(-10)
+  };
+}
+function buildWeekBarChartSVG(buckets, width, height) {
+  if (!buckets.length) return "";
+  const gap = 4;
+  const barWidth = (width - gap * (buckets.length - 1)) / buckets.length;
+  const bars = buckets.map((b, i) => {
+    const ratio = b.total > 0 ? b.done / b.total : 0;
+    const barH = Math.max(3, ratio * (height - 2));
+    const x = i * (barWidth + gap);
+    const y = height - barH;
+    return "<rect x='" + x.toFixed(1) + "' y='" + y.toFixed(1) + "' width='" + Math.max(2, barWidth).toFixed(1) + "' height='" + barH.toFixed(1) + "' rx='2' fill='currentColor' opacity='" + (i === buckets.length - 1 ? "1" : "0.55") + "'/>";
+  }).join("");
+  return "<svg viewBox='0 0 " + width + " " + height + "' preserveAspectRatio='none'>" + bars + "</svg>";
+}
+function statCardHTML(label, value) {
+  return "<div class='stat-card'><div class='stat-card-value'>" + value + "</div><div class='stat-card-label'>" + label + "</div></div>";
+}
+function renderStatistikContent() {
+  const s = computeFullStats();
+  const hours = Math.floor(s.totalDurationSec / 3600);
+  const mins = Math.round((s.totalDurationSec % 3600) / 60);
+  const durationText = s.totalDurationSec > 0 ? (hours > 0 ? hours + " Std. " + mins + " Min." : mins + " Min.") : "&ndash;";
+  const chart = buildWeekBarChartSVG(s.weekBuckets, 280, 50);
+  return "<div class='stat-grid'>"
+    + statCardHTML("Einheiten", s.completed + "/" + s.totalDays)
+    + statCardHTML("Erfolgsquote", s.successRate !== null ? s.successRate + "%" : "&ndash;")
+    + statCardHTML("Aktuelle Serie", String(s.currentStreak))
+    + statCardHTML("Längste Serie", String(s.longestStreak))
+    + statCardHTML("Sätze gesamt", String(s.totalSets))
+    + statCardHTML("Trainingsdauer", durationText)
+    + "</div>"
+    + (chart ? "<div class='stat-chart-block'><div class='stat-chart-title'>Wochenverlauf</div><div class='stat-chart'>" + chart + "</div></div>" : "");
 }
 
 function initSplash() {
@@ -3474,27 +3628,6 @@ function initSplash() {
     "Wenn du einmal aufhörst, fällt es beim nächsten Mal leichter – deshalb bleibst du dran."
   ];
 
-  // Datenbasierte Kennzahlen für den Startbildschirm: Wochenfortschritt, Serie, nächste Einheit
-  function dayFullyDone(dateKey) {
-    const status = loadJSON("trainingsplan_status")[dateKey] || null;
-    if (status === "success") return true;
-    if (status === "fail") return false;
-    const checks = loadJSON("trainingsplan_checks")[dateKey] || {};
-    const warm = loadJSON("trainingsplan_warmup")[dateKey] || {};
-    const dayExercises = getExercisesForDate(dateKey);
-    let doneMain = 0, doneWarm = 0;
-    dayExercises.forEach((ex, i) => {
-      const val = checks[i];
-      const cnt = typeof val === "number" ? val : (val ? ex.sets : 0);
-      if (cnt >= ex.sets) doneMain++;
-    });
-    warmup.forEach((w, i) => {
-      const val = warm[i];
-      const cnt = typeof val === "number" ? val : (val ? w.sets : 0);
-      if (cnt >= w.sets) doneWarm++;
-    });
-    return doneMain === dayExercises.length && doneWarm === warmup.length;
-  }
   function computeSplashStats() {
     const today = new Date();
     const monday = getMonday(today);

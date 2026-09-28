@@ -7,12 +7,21 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Trainingsplan">
-<meta name="theme-color" content="#17140f">
+<meta name="theme-color" content="#000000" id="themeColorMeta">
 <link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAIAAACyr5FlAAACJklEQVR4nO3dsW3CUBRA0RClooSKIiNmmoyYHVJnAV8X2HoGcs4CHz1dGb5k9E6X6+0Nlrwf/QF4XOIgiYMkDpI4SOIgiYMkDpI4SOIgiYMkDpI4SOIgiYMkDpI4SOIgiYMkDpI4SOIgiYMkDpI4SOIgiYMkDpI4SOIgiYMkDpI4SOIgiYMkDpI4SOIgiYMkDpI4SOIgiYMkDpI4SOIgiYMkDpI4SOIgiYP0MX/kz/d5/tDX8Pn1O3nc9JNDGVsMT280DmVsNznDuTiUsZexSQ7FoYx9zczTbYUkDpI4SOIgiYMkDpI4SOIgiYMkDpI4SOIgiYMkDpI4SOIgDcUx/Gbsy5uZ59yTQx97GZvk6NeKPrabnOH0bw59bDE8vdPleps873AbX839V3G7rZDEQRIHSRwkcZDEQRIHSRwkcZDEQRIHSRwkcZDEQRIHSRwkcZDEQRIHSRwkcZDEQRIHSRwkcZDEQTrg75B2r9zNjjeSHW+sseONNXa8scaONw4mDpI4SOIgiYMkDpI4SOIgiYMkDpI4SOIgiYMkDpI4SOIg2fH2lOx4Y5kdbyyz441ldrzxKNxWSOIgiYMkDpI4SOIgiYMkDpI4SOIgiYMkDpI4SOIgiYMkDpI4SOIgiYMkDpI4SOIgiYMkDpI4SOIgiYMkDpI4SOIgiYMkDpI4SOIgiYMkDpI4SOIgiYMkDpI4SOIgiYMkDpI4SOIgiYMkDpI4SOIg/QH9UTtflWsoAAAAAABJRU5ErkJggg==">
 <title>Trainingsplan</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=swap" rel="stylesheet">
+<script>
+  // Farbschema so früh wie möglich setzen (vor dem ersten Rendern), damit es nicht kurz aufblitzt.
+  (function () {
+    try {
+      var stored = localStorage.getItem("trainingsplan_theme");
+      if (stored === "light" || stored === "dark") document.documentElement.setAttribute("data-theme", stored);
+    } catch (e) {}
+  })();
+</script>
 <style>
   :root {
     --display-font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", sans-serif;
@@ -20,12 +29,15 @@
     --bg-alt: #1c1c1e;
     --bg-alt-2: #2c2c2e;
     --ink: #f5f5f7;
+    --ink-rgb: 245,245,247;
     --muted: #8e8e93;
     --cobalt: #0a84ff;
     --cobalt-light: #409cff;
     --cobalt-dim: #1c2733;
+    --cobalt-rgb: 10,132,255;
     --steel: #98989d;
     --steel-dim: #232326;
+    --steel-rgb: 152,152,157;
     --red: #ff453a;
     --green: #30d158;
     --green-light: #64d987;
@@ -33,16 +45,72 @@
     --line-soft: #2c2c2e;
     --rest-stripe: #000000;
     --rest-stripe-alt: #121214;
+    --shadow-soft: rgba(0,0,0,0.25);
+    --shadow-strong: rgba(0,0,0,0.45);
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #f2f2f7;
+      --bg-alt: #ffffff;
+      --bg-alt-2: #f2f2f7;
+      --ink: #1c1c1e;
+      --ink-rgb: 28,28,30;
+      --muted: #6e6e73;
+      --cobalt: #007aff;
+      --cobalt-light: #0a84ff;
+      --cobalt-dim: #e8f1ff;
+      --cobalt-rgb: 0,122,255;
+      --steel: #8e8e93;
+      --steel-dim: #e9e9ec;
+      --steel-rgb: 142,142,147;
+      --red: #ff3b30;
+      --green: #248a3d;
+      --green-light: #30a44a;
+      --line: #d1d1d6;
+      --line-soft: #e5e5ea;
+      --rest-stripe: #ffffff;
+      --rest-stripe-alt: #f7f7f9;
+      --shadow-soft: rgba(60,60,67,0.12);
+      --shadow-strong: rgba(60,60,67,0.18);
+      color-scheme: light;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #f2f2f7;
+    --bg-alt: #ffffff;
+    --bg-alt-2: #f2f2f7;
+    --ink: #1c1c1e;
+    --ink-rgb: 28,28,30;
+    --muted: #6e6e73;
+    --cobalt: #007aff;
+    --cobalt-light: #0a84ff;
+    --cobalt-dim: #e8f1ff;
+    --cobalt-rgb: 0,122,255;
+    --steel: #8e8e93;
+    --steel-dim: #e9e9ec;
+    --steel-rgb: 142,142,147;
+    --red: #ff3b30;
+    --green: #248a3d;
+    --green-light: #30a44a;
+    --line: #d1d1d6;
+    --line-soft: #e5e5ea;
+    --rest-stripe: #ffffff;
+    --rest-stripe-alt: #f7f7f9;
+    --shadow-soft: rgba(60,60,67,0.12);
+    --shadow-strong: rgba(60,60,67,0.18);
+    color-scheme: light;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; background: var(--bg); color: var(--ink); }
   html, body { height: 100%; }
+  body { transition: background-color 0.25s ease, color 0.25s ease; }
 
-  /* leichte gebürstete Stahl-Textur im Hintergrund, sehr dezent */
+  /* leichte gebürstete Textur im Hintergrund, sehr dezent, passt sich dem Farbschema an */
   body {
     background-image:
-      repeating-linear-gradient(155deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 5px),
-      radial-gradient(ellipse at 20% -10%, rgba(191,106,46,0.10), transparent 55%),
+      repeating-linear-gradient(155deg, rgba(var(--ink-rgb),0.012) 0px, rgba(var(--ink-rgb),0.012) 1px, transparent 1px, transparent 5px),
+      radial-gradient(ellipse at 20% -10%, rgba(var(--cobalt-rgb),0.08), transparent 55%),
       linear-gradient(var(--bg), var(--bg));
     background-attachment: fixed;
   }
@@ -53,7 +121,7 @@
     z-index: 999;
     overflow: hidden;
     background:
-      radial-gradient(ellipse at 50% 20%, rgba(191,106,46,0.14), transparent 60%),
+      radial-gradient(ellipse at 50% 20%, rgba(var(--cobalt-rgb),0.14), transparent 60%),
       var(--bg);
     display: flex;
     flex-direction: column;
@@ -69,8 +137,8 @@
     position: absolute;
     inset: -1px;
     background-image:
-      linear-gradient(rgba(226,152,95,0.05) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(226,152,95,0.05) 1px, transparent 1px);
+      linear-gradient(rgba(var(--cobalt-rgb),0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(var(--cobalt-rgb),0.05) 1px, transparent 1px);
     background-size: 28px 28px;
     -webkit-mask-image: radial-gradient(ellipse 70% 55% at 50% 30%, #000 40%, transparent 90%);
     mask-image: radial-gradient(ellipse 70% 55% at 50% 30%, #000 40%, transparent 90%);
@@ -92,7 +160,7 @@
   }
 
   .splash-brand { display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 1; }
-  .splash-icon { width: 72px; height: 72px; filter: drop-shadow(0 4px 10px rgba(191,106,46,0.35)); }
+  .splash-icon { width: 72px; height: 72px; filter: drop-shadow(0 4px 10px rgba(var(--cobalt-rgb),0.35)); }
   .splash-icon.spinning {
     animation: iconSpin 1s linear infinite;
     transform-origin: 50% 50%;
@@ -156,7 +224,7 @@
     color: var(--cobalt-light);
     font-variant-numeric: tabular-nums;
     line-height: 1.1;
-    text-shadow: 0 0 14px rgba(226,152,95,0.45);
+    text-shadow: 0 0 14px rgba(var(--cobalt-rgb),0.45);
     letter-spacing: -0.3px;
   }
   .splash-stat .stat-num.stat-word {
@@ -330,7 +398,7 @@
     box-shadow:
       0 1px 0 rgba(255,255,255,0.35) inset,
       0 -10px 16px rgba(0,0,0,0.18) inset,
-      0 8px 22px rgba(191,106,46,0.45),
+      0 8px 22px rgba(var(--cobalt-rgb),0.45),
       0 2px 6px rgba(0,0,0,0.35);
     transition: transform 0.15s ease, box-shadow 0.15s ease;
   }
@@ -347,13 +415,13 @@
     box-shadow:
       0 1px 0 rgba(255,255,255,0.25) inset,
       0 -6px 12px rgba(0,0,0,0.22) inset,
-      0 4px 12px rgba(191,106,46,0.35);
+      0 4px 12px rgba(var(--cobalt-rgb),0.35);
   }
 
   textarea, input { -webkit-user-select: text; user-select: text; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    padding: calc(22px + env(safe-area-inset-top, 0px)) calc(18px + env(safe-area-inset-right, 0px)) calc(60px + env(safe-area-inset-bottom, 0px)) calc(18px + env(safe-area-inset-left, 0px));
+    padding: calc(58px + env(safe-area-inset-top, 0px)) calc(18px + env(safe-area-inset-right, 0px)) calc(60px + env(safe-area-inset-bottom, 0px)) calc(18px + env(safe-area-inset-left, 0px));
     -webkit-user-select: none; user-select: none;
   }
 
@@ -363,7 +431,7 @@
     gap: 18px;
     padding-bottom: 20px;
     border-bottom: 1px solid var(--line);
-    box-shadow: 0 1px 0 rgba(191,106,46,0.18);
+    box-shadow: 0 1px 0 rgba(var(--cobalt-rgb),0.18);
     margin-bottom: 22px;
   }
   .header .num { font-family: var(--display-font); font-size: 70px; font-weight: 700; line-height: 0.82; letter-spacing: -2px; color: var(--ink); }
@@ -476,10 +544,10 @@
     border-radius: 3px;
     background: var(--cobalt-dim);
     color: var(--cobalt-light);
-    border: 1px solid rgba(226,152,95,0.25);
+    border: 1px solid rgba(var(--cobalt-rgb),0.25);
   }
   .week-badge.past { background: var(--bg-alt); color: var(--muted); border-color: var(--line); }
-  .week-badge.future { background: var(--steel-dim); color: var(--steel); border-color: rgba(168,157,135,0.25); }
+  .week-badge.future { background: var(--steel-dim); color: var(--steel); border-color: rgba(var(--steel-rgb),0.25); }
   .week-btns { display: flex; gap: 8px; align-items: center; }
   .nav-btn {
     background: var(--bg-alt);
@@ -589,12 +657,12 @@
     position: relative;
     overflow: hidden;
     background:
-      radial-gradient(circle 3px at 91% 18%, rgba(226,152,95,0.28), transparent 70%),
-      radial-gradient(circle 5px at 84.5% 29%, rgba(226,152,95,0.20), transparent 70%),
-      radial-gradient(circle 7px at 77% 42%, rgba(226,152,95,0.13), transparent 70%),
-      repeating-linear-gradient(135deg, rgba(226,152,95,0.045) 0px, rgba(226,152,95,0.045) 1px, transparent 1px, transparent 13px),
+      radial-gradient(circle 3px at 91% 18%, rgba(var(--steel-rgb),0.28), transparent 70%),
+      radial-gradient(circle 5px at 84.5% 29%, rgba(var(--steel-rgb),0.20), transparent 70%),
+      radial-gradient(circle 7px at 77% 42%, rgba(var(--steel-rgb),0.13), transparent 70%),
+      repeating-linear-gradient(135deg, rgba(var(--steel-rgb),0.045) 0px, rgba(var(--steel-rgb),0.045) 1px, transparent 1px, transparent 13px),
       repeating-linear-gradient(45deg, rgba(0,0,0,0.24) 0px, rgba(0,0,0,0.24) 1px, transparent 1px, transparent 13px),
-      radial-gradient(ellipse at 8% -12%, rgba(191,106,46,0.14), transparent 55%),
+      radial-gradient(ellipse at 8% -12%, rgba(var(--steel-rgb),0.14), transparent 55%),
       linear-gradient(155deg, var(--rest-stripe) 0%, var(--rest-stripe-alt) 80%);
   }
   /* Vergangener Trainingstag, Feedback noch offen: dezente kobaltblaue Textur, signalisiert "hier fehlt noch was" */
@@ -602,13 +670,13 @@
     position: relative;
     overflow: hidden;
     background:
-      radial-gradient(circle 3px at 91% 14%, rgba(226,152,95,0.24), transparent 70%),
-      radial-gradient(circle 5px at 84.5% 24%, rgba(226,152,95,0.16), transparent 70%),
-      repeating-linear-gradient(135deg, rgba(226,152,95,0.032) 0px, rgba(226,152,95,0.032) 1px, transparent 1px, transparent 13px),
+      radial-gradient(circle 3px at 91% 14%, rgba(var(--cobalt-rgb),0.24), transparent 70%),
+      radial-gradient(circle 5px at 84.5% 24%, rgba(var(--cobalt-rgb),0.16), transparent 70%),
+      repeating-linear-gradient(135deg, rgba(var(--cobalt-rgb),0.032) 0px, rgba(var(--cobalt-rgb),0.032) 1px, transparent 1px, transparent 13px),
       repeating-linear-gradient(45deg, rgba(0,0,0,0.16) 0px, rgba(0,0,0,0.16) 1px, transparent 1px, transparent 13px),
-      radial-gradient(ellipse at 8% -12%, rgba(191,106,46,0.12), transparent 55%),
+      radial-gradient(ellipse at 8% -12%, rgba(var(--cobalt-rgb),0.12), transparent 55%),
       linear-gradient(155deg, var(--bg-alt) 0%, var(--bg-alt-2) 85%);
-    border-color: rgba(226,152,95,0.22);
+    border-color: rgba(var(--cobalt-rgb),0.22);
   }
   /* Vergangener Trainingstag, als erfolgreich markiert: grüner Grundton */
   .session.past.status-success {
@@ -642,7 +710,7 @@
     position: absolute;
     inset: 0;
     pointer-events: none;
-    box-shadow: inset 0 0 0 1px rgba(226,152,95,0.06);
+    box-shadow: inset 0 0 0 1px rgba(var(--cobalt-rgb),0.06);
   }
   .session h2 { font-family: var(--display-font); font-size: 21px; font-weight: 600; margin: 0 0 12px; letter-spacing: 0.1px; }
 
@@ -651,7 +719,7 @@
   .time-block .arrow { font-size: 17px; color: var(--muted); }
   .time-block .dur {
     margin-left: auto; background: var(--cobalt-dim); color: var(--cobalt-light);
-    border: 1px solid rgba(226,152,95,0.25);
+    border: 1px solid rgba(var(--cobalt-rgb),0.25);
     font-size: 12.5px; font-weight: 700; padding: 5px 11px; border-radius: 3px; white-space: nowrap;
   }
   .now-tag { font-size: 11.5px; color: var(--red); font-weight: 700; margin-bottom: 12px; letter-spacing: 0.2px; }
@@ -680,7 +748,7 @@
   .move-row { margin-bottom: 14px; font-size: 12.5px; color: var(--steel); }
   .move-row.moved-away, .move-row.moved-here {
     background: var(--cobalt-dim);
-    border: 1px solid rgba(226,152,95,0.25);
+    border: 1px solid rgba(var(--cobalt-rgb),0.25);
     border-radius: 5px;
     padding: 10px 12px;
     display: flex;
@@ -761,7 +829,6 @@
   .time-gate-row button:active { transform: translateY(1px); }
   .time-gate-hint { font-size: 11px; color: var(--muted); margin-top: 10px; line-height: 1.5; }
 
-  .warmup-box { margin-bottom: 6px; }
   .warmup-head {
     display: flex;
     align-items: center;
@@ -805,55 +872,8 @@
     cursor: pointer;
     transition: background 0.15s ease, color 0.15s ease;
   }
-  .tab-btn.active.warm-tab { background: var(--steel-dim); color: var(--steel); border: 1px solid rgba(168,157,135,0.3); }
+  .tab-btn.active.warm-tab { background: var(--steel-dim); color: var(--steel); border: 1px solid rgba(var(--steel-rgb),0.3); }
   .tab-btn.active.main-tab { background: var(--cobalt); color: #ffffff; }
-
-  .task-card {
-    display: grid;
-    grid-template-columns: 30px 1fr auto 30px;
-    align-items: center;
-    column-gap: 12px;
-    background: var(--bg-alt-2);
-    border: 1px solid var(--line-soft);
-    border-left: 3px solid var(--line);
-    border-radius: 12px;
-    padding: 12px 12px 12px 13px;
-    margin-bottom: 6px;
-    position: relative;
-    transition: border-color 0.2s ease, opacity 0.2s ease;
-  }
-  .task-card.main-card { border-left-color: rgba(191,106,46,0.55); }
-  .task-card.warm-card { border-left-color: rgba(168,157,135,0.55); }
-  .task-card.done { opacity: 0.5; }
-  .task-card.done.main-card { border-left-color: var(--cobalt); }
-  .task-card.done.warm-card { border-left-color: var(--steel); }
-  .task-card .badge-num {
-    font-family: "SF Mono", "Courier New", monospace;
-    font-size: 11.5px; font-weight: 700; color: var(--muted);
-    letter-spacing: 0.5px;
-  }
-  .badge-icon-canvas { display: block; margin: 0 auto; }
-  .task-card .name { min-width: 0; font-size: 14.5px; font-weight: 600; line-height: 1.25; }
-  .task-card.done .name { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line); }
-  .task-card .reps {
-    font-family: "SF Mono", "Courier New", monospace;
-    font-size: 12px; font-weight: 700; white-space: nowrap; text-align: right;
-  }
-  .task-card .reps.main-reps { color: var(--cobalt-light); }
-  .task-card .reps.warm-reps { color: var(--steel); }
-  .task-card.done .reps { color: var(--muted); }
-  .check-circle {
-    width: 25px; height: 25px; border-radius: 8px;
-    border: 2px solid var(--line); flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; font-size: 13px; color: transparent; font-weight: 900;
-    transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
-    justify-self: end;
-  }
-  .check-circle:active { transform: scale(0.85); }
-  .check-circle.checked.main-check { background: var(--cobalt); border-color: var(--cobalt); color: #ffffff; }
-  .check-circle.checked.warm-check { background: var(--steel); border-color: var(--steel); color: #00050f; }
-  .check-circle.checked:active { transform: scale(0.85); }
 
   .ex-list { margin-top: 4px; }
 
@@ -912,14 +932,14 @@
     background: var(--cobalt);
     padding: 8px 14px; border-radius: 999px;
     cursor: pointer;
-    box-shadow: 0 0 0 0 rgba(226,152,95,0.5);
+    box-shadow: 0 0 0 0 rgba(var(--cobalt-rgb),0.5);
     animation: setPulse 1.7s ease-in-out infinite;
   }
   .circuit-go:active { transform: scale(0.92); }
   .circuit-step.done .circuit-info { cursor: pointer; }
   @keyframes setPulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(226,152,95,0.45); }
-    50% { box-shadow: 0 0 0 6px rgba(226,152,95,0); }
+    0%, 100% { box-shadow: 0 0 0 0 rgba(var(--cobalt-rgb),0.45); }
+    50% { box-shadow: 0 0 0 6px rgba(var(--cobalt-rgb),0); }
   }
 
   .circuit-rest {
@@ -940,7 +960,7 @@
     width: 6px; height: 6px; border-radius: 50%;
     background: var(--steel);
     flex-shrink: 0;
-    box-shadow: 0 0 6px 1px rgba(168,157,135,0.5);
+    box-shadow: 0 0 6px 1px rgba(var(--steel-rgb),0.5);
     position: relative; left: 6px;
   }
 
@@ -960,7 +980,7 @@
     background: linear-gradient(180deg, var(--bg-alt-2), var(--bg));
     padding: 9px 16px 9px 13px;
     border-radius: 999px;
-    border: 1px solid rgba(226,152,95,0.3);
+    border: 1px solid rgba(var(--cobalt-rgb),0.3);
     box-shadow: 0 3px 10px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.04);
     margin-bottom: 14px;
   }
@@ -969,7 +989,7 @@
     width: 7px; height: 7px;
     border-radius: 50%;
     background: var(--cobalt-light);
-    box-shadow: 0 0 9px 1.5px rgba(226,152,95,0.65);
+    box-shadow: 0 0 9px 1.5px rgba(var(--cobalt-rgb),0.65);
     flex-shrink: 0;
   }
 
@@ -977,12 +997,12 @@
     position: relative;
     overflow: hidden;
     background:
-      radial-gradient(circle 3px at 91% 18%, rgba(168,157,135,0.24), transparent 70%),
-      radial-gradient(circle 5px at 84.5% 29%, rgba(168,157,135,0.17), transparent 70%),
-      radial-gradient(circle 7px at 77% 42%, rgba(168,157,135,0.11), transparent 70%),
-      repeating-linear-gradient(135deg, rgba(168,157,135,0.04) 0px, rgba(168,157,135,0.04) 1px, transparent 1px, transparent 13px),
+      radial-gradient(circle 3px at 91% 18%, rgba(var(--steel-rgb),0.24), transparent 70%),
+      radial-gradient(circle 5px at 84.5% 29%, rgba(var(--steel-rgb),0.17), transparent 70%),
+      radial-gradient(circle 7px at 77% 42%, rgba(var(--steel-rgb),0.11), transparent 70%),
+      repeating-linear-gradient(135deg, rgba(var(--steel-rgb),0.04) 0px, rgba(var(--steel-rgb),0.04) 1px, transparent 1px, transparent 13px),
       repeating-linear-gradient(45deg, rgba(0,0,0,0.24) 0px, rgba(0,0,0,0.24) 1px, transparent 1px, transparent 13px),
-      radial-gradient(ellipse at 8% -12%, rgba(168,157,135,0.12), transparent 55%),
+      radial-gradient(ellipse at 8% -12%, rgba(var(--steel-rgb),0.12), transparent 55%),
       linear-gradient(155deg, var(--rest-stripe) 0%, var(--rest-stripe-alt) 80%);
   }
   .pending-stamp {
@@ -997,7 +1017,7 @@
   .day.status-success.train { border-bottom-color: var(--green); }
   .day.status-fail .dot { background: var(--red); }
   .day.status-fail.train { border-bottom-color: var(--red); }
-  .day.day-moved .dot { box-shadow: 0 0 0 2px rgba(226,152,95,0.55); }
+  .day.day-moved .dot { box-shadow: 0 0 0 2px rgba(var(--cobalt-rgb),0.55); }
 
   .side-fill.failed { background: linear-gradient(180deg, #cf7b5c, var(--red)); }
 
@@ -1090,14 +1110,14 @@
     border-radius: 50%;
     pointer-events: none;
     z-index: 9998;
-    background: radial-gradient(circle, rgba(226,152,95,0.55) 0%, rgba(191,106,46,0.28) 45%, transparent 72%);
-    box-shadow: 0 0 16px 2px rgba(191,106,46,0.25);
+    background: radial-gradient(circle, rgba(var(--cobalt-rgb),0.55) 0%, rgba(var(--cobalt-rgb),0.28) 45%, transparent 72%);
+    box-shadow: 0 0 16px 2px rgba(var(--cobalt-rgb),0.25);
     animation: tapRippleAnim 0.62s cubic-bezier(.22,.75,.32,1) both;
   }
   .tap-ripple.accent {
     width: 60px; height: 60px;
-    background: radial-gradient(circle, rgba(226,152,95,0.65) 0%, rgba(191,106,46,0.32) 45%, transparent 72%);
-    box-shadow: 0 0 20px 3px rgba(191,106,46,0.3);
+    background: radial-gradient(circle, rgba(var(--cobalt-rgb),0.65) 0%, rgba(var(--cobalt-rgb),0.32) 45%, transparent 72%);
+    box-shadow: 0 0 20px 3px rgba(var(--cobalt-rgb),0.3);
   }
   .tap-ripple.success {
     width: 60px; height: 60px;
@@ -1128,7 +1148,7 @@
   .notes-box textarea {
     width: 100%; min-height: 78px; position: relative;
     background:
-      radial-gradient(circle at 97% 102%, rgba(226,152,95,0.07), transparent 50%),
+      radial-gradient(circle at 97% 102%, rgba(var(--cobalt-rgb),0.07), transparent 50%),
       linear-gradient(180deg, var(--bg-alt-2), var(--bg));
     border: 1px solid var(--line);
     border-radius: 18px;
@@ -1141,7 +1161,7 @@
   .notes-box textarea:focus {
     outline: none;
     border-color: var(--cobalt);
-    box-shadow: inset 0 1px 4px rgba(0,0,0,0.4), 0 0 0 3px rgba(191,106,46,0.2);
+    box-shadow: inset 0 1px 4px rgba(0,0,0,0.4), 0 0 0 3px rgba(var(--cobalt-rgb),0.2);
   }
   .save-tag {
     display: inline-flex; align-items: center; gap: 5px;
@@ -1161,7 +1181,7 @@
   #authScreen {
     position: fixed; inset: 0; z-index: 1000;
     background:
-      radial-gradient(ellipse at 50% 20%, rgba(191,106,46,0.14), transparent 60%),
+      radial-gradient(ellipse at 50% 20%, rgba(var(--cobalt-rgb),0.14), transparent 60%),
       var(--bg);
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 18px; padding: 24px 20px;
@@ -1194,12 +1214,26 @@
   }
   .auth-error { font-size: 12px; color: #f0958d; margin-bottom: 10px; min-height: 1px; }
 
-  .account-btn {
-    position: fixed; top: calc(14px + env(safe-area-inset-top, 0px)); right: 14px; z-index: 50;
+  .util-btn {
+    position: fixed; top: calc(14px + env(safe-area-inset-top, 0px)); z-index: 1001;
+    width: 34px; height: 34px; border-radius: 50%;
     background: var(--bg-alt-2); border: 1px solid var(--line); color: var(--muted);
-    font-size: 11px; font-weight: 600; padding: 6px 11px; border-radius: 999px; cursor: pointer;
-    font-family: inherit;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; padding: 0; font-family: inherit;
+    box-shadow: 0 2px 6px var(--shadow-soft);
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
   }
+  .util-btn:active { transform: scale(0.9); background: var(--bg-alt); }
+  .util-btn svg { width: 16px; height: 16px; display: block; }
+  .theme-toggle-btn { left: 14px; }
+  .theme-toggle-btn .icon-moon { display: none; }
+  :root[data-theme="light"] .theme-toggle-btn .icon-sun { display: none; }
+  :root[data-theme="light"] .theme-toggle-btn .icon-moon { display: block; }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) .theme-toggle-btn .icon-sun { display: none; }
+    :root:not([data-theme="dark"]) .theme-toggle-btn .icon-moon { display: block; }
+  }
+  .account-btn { right: 14px; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 
@@ -1221,7 +1255,13 @@
   </div>
 </div>
 
-<button class="account-btn" id="accountBtn" style="display:none;">Abmelden</button>
+<button class="util-btn theme-toggle-btn" id="themeToggleBtn" aria-label="Farbschema wechseln" title="Hell/Dunkel">
+  <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
+  <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>
+</button>
+<button class="util-btn account-btn" id="accountBtn" aria-label="Abmelden" title="Abmelden" style="display:none;">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+</button>
 
 <div id="splash" style="display:none;">
   <div class="splash-bg-grid"></div>
@@ -1480,6 +1520,46 @@ async function submitAuth() {
 }
 function hideAuthScreen() { document.getElementById("authScreen").style.display = "none"; }
 function showAuthScreen() { document.getElementById("authScreen").style.display = "flex"; }
+
+// ====== Hell-/Dunkelmodus ======
+// Ohne gespeicherte Wahl folgt die App dem Systemschema (siehe CSS-Media-Query);
+// eine explizite Wahl wird per data-theme-Attribut erzwungen und gemerkt.
+function getStoredTheme() {
+  try { return localStorage.getItem("trainingsplan_theme"); } catch (e) { return null; }
+}
+function systemPrefersLight() {
+  return !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches);
+}
+function effectiveTheme() {
+  const explicit = document.documentElement.getAttribute("data-theme");
+  return explicit || (systemPrefersLight() ? "light" : "dark");
+}
+function applyThemeSideEffects() {
+  const theme = effectiveTheme();
+  const meta = document.getElementById("themeColorMeta");
+  if (meta) meta.setAttribute("content", theme === "light" ? "#f2f2f7" : "#000000");
+  if (typeof drawBadgeIcons === "function") drawBadgeIcons();
+}
+function setTheme(theme) {
+  if (theme === "light" || theme === "dark") document.documentElement.setAttribute("data-theme", theme);
+  else document.documentElement.removeAttribute("data-theme");
+  try {
+    if (theme) localStorage.setItem("trainingsplan_theme", theme);
+    else localStorage.removeItem("trainingsplan_theme");
+  } catch (e) {}
+  applyThemeSideEffects();
+}
+(function initThemeToggle() {
+  applyThemeSideEffects();
+  const btn = document.getElementById("themeToggleBtn");
+  if (btn) btn.addEventListener("click", () => setTheme(effectiveTheme() === "light" ? "dark" : "light"));
+  if (window.matchMedia) {
+    const mq = window.matchMedia("(prefers-color-scheme: light)");
+    const onChange = () => { if (!getStoredTheme()) applyThemeSideEffects(); };
+    if (mq.addEventListener) mq.addEventListener("change", onChange);
+    else if (mq.addListener) mq.addListener(onChange);
+  }
+})();
 
 async function onAuthReady(user) {
   currentUser = user;
@@ -2330,9 +2410,19 @@ function attachMoveHandlers(dateKey) {
 }
 
 // Zeichnet kleine Icons (Blitz, Satz-Haken, Übungs-Nummer) per Canvas statt Emoji
+// Zeichnet die Satz-Nummer-Kreise per Canvas; Farben werden live aus den CSS-Variablen
+// gelesen, damit sie sich beim Wechsel zwischen Hell/Dunkel automatisch anpassen.
 function drawBadgeIcons() {
-  document.querySelectorAll("canvas[data-icon]").forEach(canvas => {
-    const icon = canvas.dataset.icon;
+  const styles = getComputedStyle(document.documentElement);
+  const cssVar = (name, fallback) => (styles.getPropertyValue(name) || "").trim() || fallback;
+  const cobalt = cssVar("--cobalt", "#0a84ff");
+  const cobaltLight = cssVar("--cobalt-light", "#409cff");
+  const steelDim = cssVar("--steel-dim", "#232326");
+  const bgAlt2 = cssVar("--bg-alt-2", "#2c2c2e");
+  const lineColor = cssVar("--line", "#38383a");
+  const muted = cssVar("--muted", "#8e8e93");
+
+  document.querySelectorAll("canvas[data-icon='num']").forEach(canvas => {
     const ctx = canvas.getContext("2d");
     const dpr = Math.max(window.devicePixelRatio || 1, 2);
     const size = parseInt(canvas.getAttribute("width"), 10) || 16;
@@ -2342,54 +2432,25 @@ function drawBadgeIcons() {
     canvas.style.height = size + "px";
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, size, size);
-    if (icon === "check") {
-      ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = size * 0.16;
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-      ctx.beginPath();
-      ctx.moveTo(size * 0.18, size * 0.52);
-      ctx.lineTo(size * 0.42, size * 0.78);
-      ctx.lineTo(size * 0.86, size * 0.22);
-      ctx.stroke();
-    } else if (icon === "num") {
-      const num = canvas.dataset.num;
-      const done = canvas.dataset.done === "1";
-      const cx = size / 2, cy = size / 2, r = size / 2 - 1;
-      const grad = ctx.createLinearGradient(0, 0, 0, size);
-      if (done) { grad.addColorStop(0, "#5eb0ff"); grad.addColorStop(1, "#0a84ff"); }
-      else { grad.addColorStop(0, "#362c1e"); grad.addColorStop(1, "#241e15"); }
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = done ? "rgba(23,17,10,0.4)" : "rgba(226,152,95,0.4)";
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      ctx.fillStyle = done ? "#00050f" : "#5eb0ff";
-      ctx.font = "700 " + Math.round(size * 0.4) + "px 'SF Mono', 'Roboto Mono', monospace";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(num, cx, cy + size * 0.03);
-    } else if (icon === "bolt") {
-      const grad = ctx.createLinearGradient(0, 0, 0, size);
-      grad.addColorStop(0, "#a8d4ff");
-      grad.addColorStop(1, "#0060c0");
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.moveTo(8.5, 0.5);
-      ctx.lineTo(2.5, 9.5);
-      ctx.lineTo(6.8, 9.5);
-      ctx.lineTo(5.8, 15.5);
-      ctx.lineTo(13.5, 6);
-      ctx.lineTo(9, 6);
-      ctx.lineTo(9.8, 0.5);
-      ctx.closePath();
-      ctx.fill();
-      ctx.strokeStyle = "rgba(23,17,10,0.5)";
-      ctx.lineWidth = 0.6;
-      ctx.stroke();
-    }
+
+    const num = canvas.dataset.num;
+    const done = canvas.dataset.done === "1";
+    const cx = size / 2, cy = size / 2, r = size / 2 - 1;
+    const grad = ctx.createLinearGradient(0, 0, 0, size);
+    if (done) { grad.addColorStop(0, cobaltLight); grad.addColorStop(1, cobalt); }
+    else { grad.addColorStop(0, bgAlt2); grad.addColorStop(1, steelDim); }
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = done ? "rgba(0,0,0,0.35)" : lineColor;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = done ? "#00050f" : muted;
+    ctx.font = "700 " + Math.round(size * 0.4) + "px 'SF Mono', 'Roboto Mono', monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(num, cx, cy + size * 0.03);
   });
 }
 
@@ -2543,7 +2604,8 @@ function initSplash() {
   const TWO_HOURS = 2 * 60 * 60 * 1000;
   let lastActive = null;
   try { lastActive = parseInt(localStorage.getItem("lastActiveAt"), 10); } catch (e) {}
-  const freshProcess = !sessionStorage.getItem("sessionActive");
+  let freshProcess = true;
+  try { freshProcess = !sessionStorage.getItem("sessionActive"); } catch (e) {}
   const tooLongAway = !lastActive || isNaN(lastActive) || (Date.now() - lastActive >= TWO_HOURS);
   const needsSplash = freshProcess || tooLongAway;
 

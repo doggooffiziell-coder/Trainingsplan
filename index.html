@@ -47,6 +47,8 @@
     --rest-stripe-alt: #121214;
     --shadow-soft: rgba(0,0,0,0.25);
     --shadow-strong: rgba(0,0,0,0.45);
+    --glass-bg: rgba(44,44,46,0.72);
+    --glass-border: rgba(255,255,255,0.09);
     color-scheme: dark;
   }
   @media (prefers-color-scheme: light) {
@@ -73,6 +75,8 @@
       --rest-stripe-alt: #f7f7f9;
       --shadow-soft: rgba(60,60,67,0.12);
       --shadow-strong: rgba(60,60,67,0.18);
+      --glass-bg: rgba(255,255,255,0.72);
+      --glass-border: rgba(0,0,0,0.06);
       color-scheme: light;
     }
   }
@@ -99,7 +103,22 @@
     --rest-stripe-alt: #f7f7f9;
     --shadow-soft: rgba(60,60,67,0.12);
     --shadow-strong: rgba(60,60,67,0.18);
+    --glass-bg: rgba(255,255,255,0.72);
+    --glass-border: rgba(0,0,0,0.06);
     color-scheme: light;
+  }
+  /* Liquid-Glass-Flächen (Sheets, Timer-Overlay, Toast, Tab-Leiste) brauchen einen deckenden
+     Ersatz-Hintergrund, wenn der Browser kein backdrop-filter unterstützt. */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .info-sheet, .rest-timer-overlay, .pr-toast, .tab-switch { background: var(--bg-alt) !important; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; background: var(--bg); color: var(--ink); }
@@ -483,8 +502,10 @@
     width: 100%;
     max-width: 480px;
     max-height: 78vh;
-    background: var(--bg-alt);
-    border: 1px solid var(--line);
+    background: var(--glass-bg);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid var(--glass-border);
     border-bottom: none;
     border-radius: 18px 18px 0 0;
     box-shadow: 0 -8px 30px rgba(0,0,0,0.4);
@@ -913,8 +934,10 @@
   .tab-switch {
     display: flex;
     gap: 4px;
-    background: var(--bg);
-    border: 1px solid var(--line);
+    background: var(--glass-bg);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    backdrop-filter: blur(16px) saturate(160%);
+    border: 1px solid var(--glass-border);
     padding: 3px;
     border-radius: 7px;
     margin: 14px 0 4px;
@@ -1007,7 +1030,10 @@
     transform: translate(-50%, -140%);
     z-index: 1002;
     display: flex; align-items: center; gap: 8px;
-    background: var(--bg-alt); border: 1px solid rgba(var(--cobalt-rgb),0.35);
+    background: var(--glass-bg);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(var(--cobalt-rgb),0.35);
     color: var(--ink); font-size: 12.5px; font-weight: 700;
     padding: 11px 16px; border-radius: 999px;
     box-shadow: 0 8px 24px var(--shadow-strong);
@@ -1024,6 +1050,25 @@
     font-size: 11px; color: var(--cobalt-light); margin-top: 2px; letter-spacing: 0.2px;
   }
   .circuit-step.done .circuit-target, .circuit-step.locked .circuit-target { color: var(--muted); }
+  .ex-info-btn {
+    flex-shrink: 0;
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    border: 1.5px solid var(--line);
+    background: var(--bg-alt);
+    color: var(--muted);
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-weight: 700;
+    font-size: 12px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+  }
+  .ex-info-btn:active { background: var(--bg-alt-2); color: var(--ink); border-color: var(--cobalt-light); }
   .circuit-go {
     flex-shrink: 0;
     font-size: 12px; font-weight: 800; color: #ffffff;
@@ -1376,8 +1421,10 @@
     position: fixed;
     left: 0; right: 0; bottom: 0;
     z-index: 950;
-    background: var(--bg-alt);
-    border-top: 1px solid var(--line);
+    background: var(--glass-bg);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+    border-top: 1px solid var(--glass-border);
     box-shadow: 0 -6px 24px var(--shadow-strong);
     padding: 14px 18px calc(14px + env(safe-area-inset-bottom, 0px));
     border-radius: 20px 20px 0 0;
@@ -1480,7 +1527,6 @@
     <div class="label">Jetzt</div>
   </div>
   <div class="header-icons">
-    <button class="info-btn" id="infoBtn" aria-label="Anleitung anzeigen">i</button>
     <button class="info-btn menu-btn" id="menuBtn" aria-label="Mehr">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg>
     </button>
@@ -1518,6 +1564,11 @@
         <button class="menu-item" id="menuDataBtn">
           <span class="menu-item-icon">&#128190;</span>
           <span class="menu-item-label">Daten</span>
+          <span class="menu-item-chev">&#8250;</span>
+        </button>
+        <button class="menu-item" id="menuAnleitungBtn">
+          <span class="menu-item-icon">&#128214;</span>
+          <span class="menu-item-label">Anleitung</span>
           <span class="menu-item-chev">&#8250;</span>
         </button>
       </div>
@@ -1589,6 +1640,16 @@
       </div>
       <div class="info-block-text">Die JSON-Sicherung enthält alle deine Daten (Haken, Notizen, Gewichte, Zeiten &hellip;) und kann später hier wieder eingelesen werden. Die CSV eignet sich zum Auswerten der Gewichte/Wiederholungen z.B. in einer Tabelle.</div>
     </div>
+  </div>
+</div>
+
+<div class="info-overlay" id="exInfoOverlay">
+  <div class="info-sheet">
+    <div class="info-sheet-head">
+      <div class="info-sheet-title" id="exInfoTitle">Übung</div>
+      <button class="info-close-btn" id="exInfoCloseBtn" aria-label="Schließen">&times;</button>
+    </div>
+    <div class="info-sheet-body" id="exInfoBody"></div>
   </div>
 </div>
 
@@ -2223,6 +2284,10 @@ function renderCircuit(dateKey, kind, limited) {
         + (suggestion ? "<div class='set-log-suggestion'>" + suggestion.text + "</div>" : "");
     }
 
+    const exInfoBtn = EXERCISE_INFO[ex.name]
+      ? "<button class='ex-info-btn' data-exname='" + encodeURIComponent(ex.name) + "' aria-label='Info zur Übung'>i</button>"
+      : "";
+
     html += "<div class='circuit-step " + status + (setLogHTML ? " has-log" : "") + "' data-kind='" + kind + "' data-ex='" + step.exIdx + "' data-set='" + step.setIdx + "'>"
       + "<canvas class='circuit-num-canvas' width='26' height='26' data-icon='num' data-num='" + (step.setIdx + 1) + "' data-done='" + (done ? 1 : 0) + "'></canvas>"
       + "<div class='circuit-info'>"
@@ -2230,6 +2295,7 @@ function renderCircuit(dateKey, kind, limited) {
       + "<div class='circuit-target'>" + targetLine + "</div>"
       + setLogHTML
       + "</div>"
+      + exInfoBtn
       + actionHTML
       + "</div>";
 
@@ -2277,6 +2343,12 @@ function attachCircuitHandlers(card, dateKey) {
       const setIdx = parseInt(el.dataset.set, 10);
       const k = el.dataset.kind || "main";
       if (setIdx === getSetCount(dateKey, exIdx, k) - 1) retreatSet(dateKey, exIdx, k);
+    });
+  });
+  card.querySelectorAll(".ex-info-btn").forEach(el => {
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      openExerciseInfo(decodeURIComponent(el.dataset.exname));
     });
   });
 }
@@ -3596,7 +3668,6 @@ setInterval(render, 15000);
 
 // Startbildschirm nur zeigen, wenn App komplett neu gestartet wurde
 // oder seit dem letzten Mal 2+ Stunden vergangen sind.
-// Info-Overlay (Anleitung), aufrufbar über den (i)-Button im Header.
 // Generischer Bottom-Sheet-Helfer (Öffnen/Schließen per Button, Antippen daneben schließt
 // auch) – wird für Anleitung, Mehr-Menü, Bestwerte und weitere Sheets wiederverwendet.
 function initSheet(btnId, overlayId, closeBtnId, onOpen) {
@@ -3611,8 +3682,12 @@ function initSheet(btnId, overlayId, closeBtnId, onOpen) {
   overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
   return { open, close };
 }
-initSheet("infoBtn", "infoOverlay", "infoCloseBtn");
 const menuSheet = initSheet("menuBtn", "menuOverlay", "menuCloseBtn");
+const anleitungSheet = initSheet(null, "infoOverlay", "infoCloseBtn");
+const menuAnleitungBtn = document.getElementById("menuAnleitungBtn");
+if (menuAnleitungBtn && menuSheet && anleitungSheet) {
+  menuAnleitungBtn.addEventListener("click", () => { menuSheet.close(); anleitungSheet.open(); });
+}
 const bestwerteSheet = initSheet(null, "bestwerteOverlay", "bestwerteCloseBtn", () => {
   document.getElementById("bestwerteBody").innerHTML = renderBestwerteContent();
 });
@@ -3640,6 +3715,18 @@ const badgesSheet = initSheet(null, "badgesOverlay", "badgesCloseBtn", () => {
 const menuBadgesBtn = document.getElementById("menuBadgesBtn");
 if (menuBadgesBtn && menuSheet && badgesSheet) {
   menuBadgesBtn.addEventListener("click", () => { menuSheet.close(); badgesSheet.open(); });
+}
+const exInfoSheet = initSheet(null, "exInfoOverlay", "exInfoCloseBtn");
+function openExerciseInfo(exerciseName) {
+  const info = EXERCISE_INFO[exerciseName];
+  if (!info || !exInfoSheet) return;
+  document.getElementById("exInfoTitle").textContent = exerciseName;
+  document.getElementById("exInfoBody").innerHTML =
+    "<div class='info-block'><div class='info-block-title'>Ausführung</div><div class='info-block-text'>" + info.execution + "</div></div>"
+    + "<div class='info-block'><div class='info-block-title'>Worauf achten</div><div class='info-block-text'>" + info.watch + "</div></div>"
+    + "<div class='info-block'><div class='info-block-title'>Muskeln</div><div class='info-block-text'>" + info.muscles + "</div></div>"
+    + "<div class='info-block'><div class='info-block-title'>Häufige Fehler</div><div class='info-block-text'>" + info.mistakes + "</div></div>";
+  exInfoSheet.open();
 }
 const dataSheet = initSheet(null, "dataOverlay", "dataCloseBtn");
 const menuDataBtn = document.getElementById("menuDataBtn");

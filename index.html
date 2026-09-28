@@ -560,6 +560,19 @@
   .stat-chart { width: 100%; height: 50px; color: var(--cobalt-light); }
   .stat-chart svg { display: block; width: 100%; height: 100%; }
 
+  .recap-row { display: flex; align-items: baseline; justify-content: space-between; }
+  .recap-label { font-size: 13.5px; font-weight: 700; color: var(--ink); }
+  .recap-value { font-size: 22px; font-weight: 800; color: var(--cobalt-light); font-variant-numeric: tabular-nums; }
+  .recap-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .recap-section-title { font-size: 12.5px; font-weight: 700; color: var(--muted); margin: 18px 0 8px; }
+  .recap-list { display: flex; flex-direction: column; gap: 6px; }
+  .recap-list-item {
+    font-size: 13px; font-weight: 600; color: var(--ink);
+    background: var(--bg-alt-2); border: 1px solid var(--line-soft);
+    border-radius: 10px; padding: 10px 12px;
+  }
+  .recap-empty { font-size: 12.5px; color: var(--muted); line-height: 1.5; margin-top: 16px; }
+
   .week-nav {
     display: flex;
     align-items: center;
@@ -1480,6 +1493,11 @@
           <span class="menu-item-label">Bestwerte</span>
           <span class="menu-item-chev">&#8250;</span>
         </button>
+        <button class="menu-item" id="menuRecapBtn">
+          <span class="menu-item-icon">&#128197;</span>
+          <span class="menu-item-label">Wochenrückblick</span>
+          <span class="menu-item-chev">&#8250;</span>
+        </button>
       </div>
     </div>
   </div>
@@ -1502,6 +1520,16 @@
       <button class="info-close-btn" id="statistikCloseBtn" aria-label="Schließen">&times;</button>
     </div>
     <div class="info-sheet-body" id="statistikBody"></div>
+  </div>
+</div>
+
+<div class="info-overlay" id="recapOverlay">
+  <div class="info-sheet">
+    <div class="info-sheet-head">
+      <div class="info-sheet-title">Wochenrückblick</div>
+      <button class="info-close-btn" id="recapCloseBtn" aria-label="Schließen">&times;</button>
+    </div>
+    <div class="info-sheet-body" id="recapBody"></div>
   </div>
 </div>
 
@@ -2317,9 +2345,16 @@ function findLastSetLog(beforeDateKey, exerciseName, setIdx) {
 // Bestwerte einer Übung über die gesamte Historie: höchstes Gewicht, beste Wdh., bestes Volumen
 // (Gewicht × Wdh., pro Tag summiert über alle Sätze dieser Übung).
 function getExerciseBests(exerciseName) {
+  return getExerciseBestsInRange(exerciseName, null, null);
+}
+// Wie getExerciseBests, aber auf einen Datumsbereich eingegrenzt (beide Enden inklusiv,
+// null = offen) – Grundlage für den Wochenrückblick (Vergleich vor/in dieser Woche).
+function getExerciseBestsInRange(exerciseName, startKey, endKey) {
   const logs = loadSetLogs();
   let bestWeight = null, bestReps = null, bestVolume = null;
   Object.keys(logs).forEach(dk => {
+    if (startKey && dk < startKey) return;
+    if (endKey && dk > endKey) return;
     const exList = getExercisesForDate(dk);
     const exIdx = exList.findIndex(e => e.name === exerciseName);
     if (exIdx === -1) return;
@@ -3460,6 +3495,25 @@ const menuStatistikBtn = document.getElementById("menuStatistikBtn");
 if (menuStatistikBtn && menuSheet && statistikSheet) {
   menuStatistikBtn.addEventListener("click", () => { menuSheet.close(); statistikSheet.open(); });
 }
+const recapSheet = initSheet(null, "recapOverlay", "recapCloseBtn", () => {
+  document.getElementById("recapBody").innerHTML = renderWeeklyRecapContent(0);
+});
+const menuRecapBtn = document.getElementById("menuRecapBtn");
+if (menuRecapBtn && menuSheet && recapSheet) {
+  menuRecapBtn.addEventListener("click", () => { menuSheet.close(); recapSheet.open(); });
+}
+// Sonntags einmal pro Woche automatisch zeigen (rein lokaler Marker, kein Sync nötig).
+(function maybeAutoShowWeeklyRecap() {
+  if (!recapSheet) return;
+  const today = new Date();
+  if (today.getDay() !== 0) return;
+  const thisMondayKey = isoDate(getMonday(today));
+  let lastShown = null;
+  try { lastShown = localStorage.getItem("trainingsplan_recap_shown_week"); } catch (e) {}
+  if (lastShown === thisMondayKey) return;
+  try { localStorage.setItem("trainingsplan_recap_shown_week", thisMondayKey); } catch (e) {}
+  setTimeout(() => recapSheet.open(), 600);
+})();
 
 // Bewertungs-Sheet: erscheint nach dem letzten Satz einer Hauptübung, überspringbar durch
 // Antippen daneben oder das Schließen-Kreuz – ohne Auswahl wird nichts gespeichert.
@@ -3603,6 +3657,70 @@ function renderStatistikContent() {
     + statCardHTML("Trainingsdauer", durationText)
     + "</div>"
     + (chart ? "<div class='stat-chart-block'><div class='stat-chart-title'>Wochenverlauf</div><div class='stat-chart'>" + chart + "</div></div>" : "");
+}
+
+// ====== Wochenrückblick ======
+// weekOffsetForRecap folgt derselben Zählweise wie die Wochen-Navigation (0 = aktuelle Woche).
+function computeWeeklyRecap(weekOffsetForRecap) {
+  const today = new Date();
+  const realToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const thisMonday = addDays(getMonday(realToday), (weekOffsetForRecap || 0) * 7);
+  const thisSunday = addDays(thisMonday, 6);
+  const prevMonday = addDays(thisMonday, -7);
+  const prevSunday = addDays(thisMonday, -1);
+
+  function weekTotals(monday, sunday) {
+    let done = 0, total = 0;
+    for (let i = 0; i < 7; i++) {
+      const d = addDays(monday, i);
+      if (d < planStartDate || d > realToday) continue;
+      if (isCountedTrainDay(d)) { total++; if (dayFullyDone(isoDate(d))) done++; }
+    }
+    return { done, total };
+  }
+  const thisWeek = weekTotals(thisMonday, thisSunday);
+  const prevWeek = weekTotals(prevMonday, prevSunday);
+  const thisMondayKey = isoDate(thisMonday), thisSundayKey = isoDate(thisSunday), prevSundayKey = isoDate(prevSunday);
+
+  const allEx = [];
+  Object.values(dayPlans).forEach(p => p.exercises.forEach(ex => allEx.push(ex)));
+  const newRecords = [];
+  let bestProgressEx = null, bestProgressDelta = 0;
+  allEx.forEach(ex => {
+    const before = getExerciseBestsInRange(ex.name, null, prevSundayKey);
+    const uptoThisWeek = getExerciseBestsInRange(ex.name, null, thisSundayKey);
+    if (uptoThisWeek.weight !== null && (before.weight === null || uptoThisWeek.weight > before.weight)) {
+      newRecords.push(ex.name + " &ndash; " + uptoThisWeek.weight + " kg");
+    } else if (uptoThisWeek.reps !== null && (before.reps === null || uptoThisWeek.reps > before.reps)) {
+      newRecords.push(ex.name + " &ndash; " + uptoThisWeek.reps + " Wdh.");
+    }
+    const thisWeekBest = getExerciseBestsInRange(ex.name, thisMondayKey, thisSundayKey);
+    if (thisWeekBest.volume !== null) {
+      const delta = thisWeekBest.volume - (before.volume || 0);
+      if (delta > bestProgressDelta) { bestProgressDelta = delta; bestProgressEx = ex.name; }
+    }
+  });
+
+  return { thisWeek, prevWeek, delta: thisWeek.done - prevWeek.done, newRecords, bestProgressEx };
+}
+function renderWeeklyRecapContent(weekOffsetForRecap) {
+  const r = computeWeeklyRecap(weekOffsetForRecap || 0);
+  const cmpText = r.delta > 0 ? "+" + r.delta + " ggü. letzter Woche (" + r.prevWeek.done + "/" + r.prevWeek.total + ")"
+    : r.delta < 0 ? r.delta + " ggü. letzter Woche (" + r.prevWeek.done + "/" + r.prevWeek.total + ")"
+    : "genauso viel wie letzte Woche (" + r.prevWeek.done + "/" + r.prevWeek.total + ")";
+  let html = "<div class='recap-row'><span class='recap-label'>Diese Woche</span><span class='recap-value'>" + r.thisWeek.done + "/" + r.thisWeek.total + "</span></div>"
+    + "<div class='recap-sub'>" + cmpText + "</div>";
+  if (r.newRecords.length) {
+    html += "<div class='recap-section-title'>&#127942; Neue Rekorde</div><div class='recap-list'>"
+      + r.newRecords.map(n => "<div class='recap-list-item'>" + n + "</div>").join("") + "</div>";
+  }
+  if (r.bestProgressEx) {
+    html += "<div class='recap-section-title'>&#128200; Größter Fortschritt</div><div class='recap-list'><div class='recap-list-item'>" + r.bestProgressEx + "</div></div>";
+  }
+  if (!r.newRecords.length && !r.bestProgressEx) {
+    html += "<div class='recap-empty'>Noch keine Gewichte/Wdh. geloggt &ndash; sobald du welche einträgst, siehst du hier Rekorde und Fortschritt.</div>";
+  }
+  return html;
 }
 
 function initSplash() {

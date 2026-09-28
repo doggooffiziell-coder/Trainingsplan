@@ -1013,6 +1013,8 @@
   .day.locked { opacity: 0.4; }
   .day.locked.train { border-bottom-color: var(--line); }
   .day.locked .dot { background: var(--line); }
+  .day.paused.train { border-bottom-color: var(--steel); }
+  .day.paused .dot { background: var(--steel); }
   .day.status-success .dot { background: var(--green); }
   .day.status-success.train { border-bottom-color: var(--green); }
   .day.status-fail .dot { background: var(--red); }
@@ -1047,6 +1049,28 @@
     background: var(--cobalt-dim);
     color: #d99a86;
     border: 1px solid rgba(168,73,58,0.35);
+  }
+  .status-btn.yes {
+    background: var(--cobalt);
+    color: #ffffff;
+    border: 1px solid rgba(var(--cobalt-rgb),0.6);
+  }
+  .status-btn.no {
+    background: var(--steel-dim);
+    color: var(--steel);
+    border: 1px solid rgba(var(--steel-rgb),0.35);
+  }
+  .followup-note {
+    font-size: 12.5px;
+    color: var(--steel);
+    line-height: 1.5;
+    margin-top: 10px;
+  }
+  .followup-hint {
+    font-size: 11.5px;
+    color: var(--cobalt-light);
+    margin-top: 8px;
+    line-height: 1.4;
   }
   .status-badge {
     display: inline-flex;
@@ -1958,6 +1982,7 @@ function getMonday(d) {
   return addDays(new Date(d.getFullYear(), d.getMonth(), d.getDate()), -monIdx);
 }
 function sameDate(a, b) { return isoDate(a) === isoDate(b); }
+function keyToDate(key) { const p = key.split("-").map(Number); return new Date(p[0], p[1] - 1, p[2]); }
 
 let weekOffset = 0;
 let selectedIndex = (new Date().getDay() + 6) % 7; // Mon-basiert
@@ -2019,8 +2044,7 @@ function isEffectiveTrainDay(d) {
 // Ein Datum braucht die "Willst du trotzdem trainieren?"-Frage, wenn es selbst ein
 // effektiver Trainingstag ist UND der Tag davor (z.B. durch eine Verschiebung) auch einer ist.
 function needsFollowupDecision(dateKey) {
-  const parts = dateKey.split("-").map(Number);
-  const d = new Date(parts[0], parts[1] - 1, parts[2]);
+  const d = keyToDate(dateKey);
   if (!isEffectiveTrainDay(d)) return false;
   return isEffectiveTrainDay(addDays(d, -1));
 }
@@ -2299,8 +2323,15 @@ function moveTrainingDay(sourceKey, targetKey) {
 }
 function undoMove(sourceKey) {
   const moves = loadMoves();
+  const oldTarget = moves[sourceKey];
   delete moves[sourceKey];
   saveMoves(moves);
+  // War durch diese Verschiebung eine Folgetag-Abfrage nötig und ist das jetzt nicht mehr
+  // der Fall, wird eine evtl. gespeicherte Antwort dafür wieder entfernt.
+  if (oldTarget) {
+    const followupKey = isoDate(addDays(keyToDate(oldTarget), 1));
+    if (!needsFollowupDecision(followupKey)) setTrainDecision(followupKey, null);
+  }
   render();
 }
 let saveTimer = null;
@@ -2386,12 +2417,13 @@ function render() {
     const d = addDays(viewWeekStart, i);
     const dKeyLoop = isoDate(d);
     const isTrain = isEffectiveTrainDay(d);
+    const isPausedDay = isTrain && needsFollowupDecision(dKeyLoop) && getTrainDecision(dKeyLoop) === "no";
     const isMoved = !!movesMap[dKeyLoop] || !!getMoveSourceFromMoves(movesMap, dKeyLoop);
     const dayIsToday = sameDate(d, realToday);
     const isLocked = d < planStartDate;
     const dStatus = statusMap[isoDate(d)];
     const div = document.createElement("div");
-    div.className = "day" + (isTrain ? " train" : "") + (dayIsToday ? " today" : "") + (i === selectedIndex ? " selected" : "") + (isLocked ? " locked" : "") + (dStatus === "success" ? " status-success" : "") + (dStatus === "fail" ? " status-fail" : "") + (isMoved ? " day-moved" : "");
+    div.className = "day" + (isTrain ? " train" : "") + (isPausedDay ? " paused" : "") + (dayIsToday ? " today" : "") + (i === selectedIndex ? " selected" : "") + (isLocked ? " locked" : "") + (dStatus === "success" ? " status-success" : "") + (dStatus === "fail" ? " status-fail" : "") + (isMoved ? " day-moved" : "");
     div.innerHTML =
       "<span class='name'>" + monShortDays[i] + "</span>" +
       "<span class='num2'>" + d.getDate() + "</span>" +
@@ -2435,9 +2467,18 @@ function render() {
     const moves = loadMoves();
     const movedTo = moves[dateKey] || null;
     const baseTrainHere = trainingDaysMon.includes(selectedIndex);
+    let followupHintHTML = "";
+    if (movedTo) {
+      const followupKey = isoDate(addDays(keyToDate(movedTo), 1));
+      if (needsFollowupDecision(followupKey) && getTrainDecision(followupKey) === null) {
+        followupHintHTML = "<div class='followup-hint'>&#9432; Dadurch liegen zwei Trainingstage direkt hintereinander (" +
+          formatDateLabel(movedTo) + " und " + formatDateLabel(followupKey) + "). Am " + fullDayNames[(keyToDate(followupKey).getDay() + 6) % 7] +
+          " wirst du gefragt, ob du trotzdem trainieren willst.</div>";
+      }
+    }
     const moveInfoHTML = (baseTrainHere && movedTo)
       ? "<div class='move-row moved-away'>Training verschoben nach <b>" + formatDateLabel(movedTo) + "</b>." +
-        "<button class='move-undo-btn' id='undoMoveBtn'>Verschiebung aufheben</button></div>"
+        "<button class='move-undo-btn' id='undoMoveBtn'>Verschiebung aufheben</button>" + followupHintHTML + "</div>"
       : "";
     card.innerHTML =
       "<div class='session-shell'>" +
@@ -2451,6 +2492,52 @@ function render() {
     const undoMoveBtn = document.getElementById("undoMoveBtn");
     if (undoMoveBtn) undoMoveBtn.addEventListener("click", () => undoMove(dateKey));
     return;
+  }
+
+  // Folgetag-Abfrage: dieser Tag folgt direkt auf einen anderen (meist verschobenen)
+  // Trainingstag. Ohne Antwort erscheint zuerst die Ja/Nein-Frage; bei "Nein" zählt der
+  // Tag wie ein Ruhetag (keine Serie, keine Statistik), bleibt aber änderbar.
+  if (needsFollowupDecision(dateKey)) {
+    const decision = getTrainDecision(dateKey);
+    if (decision === null) {
+      card.innerHTML =
+        "<div class='session-shell'>" +
+        "<div class='side-bar'></div>" +
+        "<div class='session rest'>" +
+        "<h2>" + titlePrefix + "</h2>" +
+        "<div class='followup-note'>Du hast bereits am Vortag trainiert – dieses Training liegt direkt danach.</div>" +
+        "<div class='day-status-row'>" +
+        "<div class='status-label'>Willst du trotzdem trainieren?</div>" +
+        "<div class='status-btns'>" +
+        "<button class='status-btn yes' id='followupYesBtn'>&#10003; Ja</button>" +
+        "<button class='status-btn no' id='followupNoBtn'>&#10007; Nein</button>" +
+        "</div></div>" +
+        notesHTML +
+        "</div></div>";
+      attachNoteHandler(dateKey);
+      const yesBtn = document.getElementById("followupYesBtn");
+      const noBtn = document.getElementById("followupNoBtn");
+      if (yesBtn) yesBtn.addEventListener("click", () => { setTrainDecision(dateKey, "yes"); render(); });
+      if (noBtn) noBtn.addEventListener("click", () => { setTrainDecision(dateKey, "no"); render(); });
+      return;
+    }
+    if (decision === "no") {
+      card.innerHTML =
+        "<div class='session-shell'>" +
+        "<div class='side-bar'></div>" +
+        "<div class='session rest'>" +
+        "<h2>" + titlePrefix + "</h2>" +
+        "<div class='rest-stamp'>PAUSE</div>" +
+        "<div class='followup-note'>Du hast entschieden, heute zu pausieren, da direkt davor schon trainiert wurde. Zählt nicht als verpasst.</div>" +
+        "<button class='change-time-btn' id='changeFollowupBtn' style='margin-top:10px;'>Ändern</button>" +
+        notesHTML +
+        "</div></div>";
+      attachNoteHandler(dateKey);
+      const changeBtn = document.getElementById("changeFollowupBtn");
+      if (changeBtn) changeBtn.addEventListener("click", () => { setTrainDecision(dateKey, null); render(); });
+      return;
+    }
+    // decision === "yes" -> normaler Trainingstag, weiter im normalen Ablauf unten.
   }
 
   const isPastDay = selectedDate < realToday;
@@ -2469,6 +2556,10 @@ function render() {
       "<input type='date' id='moveDateInput' min='" + isoDate(selectedDate) + "'>" +
       "<button id='confirmMoveBtn'>Verschieben</button>" +
       "</div></div>");
+  const followupYesNoteHTML = (needsFollowupDecision(dateKey) && getTrainDecision(dateKey) === "yes" && !isPastDay)
+    ? "<div class='move-row'>Direkt nach dem Vortag entschieden, trotzdem zu trainieren. " +
+      "<button class='move-toggle-btn' id='changeFollowupBtn2'>Ändern</button></div>"
+    : "";
 
   if (isPastDay) {
     const status = loadJSON("trainingsplan_status")[dateKey] || null;
@@ -2554,6 +2645,7 @@ function render() {
       "<div class='session time-gate-session'>" +
       "<h2>" + titlePrefix + " &ndash; Trainingstag</h2>" +
       moveRowHTML +
+      followupYesNoteHTML +
       "<div class='time-gate'>" +
       "<div class='time-gate-label'>Um wie viel Uhr startest du?</div>" +
       "<div class='time-gate-row'>" +
@@ -2628,6 +2720,7 @@ function render() {
     "<div class='session'>" +
     "<h2>" + titlePrefix + (isToday ? " ist Trainingstag" : "") + "</h2>" +
     moveRowHTML +
+    followupYesNoteHTML +
     "<div class='time-block'>" +
     "<span class='t'>" + pad(startHour) + ":" + pad(startMin) + "</span>" +
     "<span class='arrow'>&rarr;</span>" +
@@ -2689,9 +2782,12 @@ function attachMoveHandlers(dateKey) {
   if (undoMoveBtn) {
     undoMoveBtn.addEventListener("click", () => undoMove(undoMoveBtn.dataset.key || dateKey));
   }
+  const changeFollowupBtn2 = document.getElementById("changeFollowupBtn2");
+  if (changeFollowupBtn2) {
+    changeFollowupBtn2.addEventListener("click", () => { setTrainDecision(dateKey, null); render(); });
+  }
 }
 
-// Zeichnet kleine Icons (Blitz, Satz-Haken, Übungs-Nummer) per Canvas statt Emoji
 // Zeichnet die Satz-Nummer-Kreise per Canvas; Farben werden live aus den CSS-Variablen
 // gelesen, damit sie sich beim Wechsel zwischen Hell/Dunkel automatisch anpassen.
 function drawBadgeIcons() {
@@ -2929,7 +3025,7 @@ function initSplash() {
     let weekDone = 0, weekTotal = 0;
     for (let i = 0; i < 7; i++) {
       const d = addDays(monday, i);
-      if (d >= planStartDate && isEffectiveTrainDay(d)) {
+      if (d >= planStartDate && isCountedTrainDay(d)) {
         weekTotal++;
         if (dayFullyDone(isoDate(d))) weekDone++;
       }
@@ -2939,7 +3035,7 @@ function initSplash() {
     let cursor = new Date(today);
     for (let i = 0; i < 365; i++) {
       if (cursor < planStartDate) break;
-      if (isEffectiveTrainDay(cursor)) {
+      if (isCountedTrainDay(cursor)) {
         const key = isoDate(cursor);
         const isToday = sameDate(cursor, today);
         if (dayFullyDone(key)) streak++;
@@ -2949,11 +3045,11 @@ function initSplash() {
     }
 
     let nextLabel = "Heute";
-    if (!(isEffectiveTrainDay(today) && !dayFullyDone(isoDate(today)))) {
+    if (!(isCountedTrainDay(today) && !dayFullyDone(isoDate(today)))) {
       let d = addDays(today, 1);
       nextLabel = "–";
       for (let i = 0; i < 8; i++) {
-        if (isEffectiveTrainDay(d)) { nextLabel = fullDayNames[(d.getDay() + 6) % 7]; break; }
+        if (isCountedTrainDay(d)) { nextLabel = fullDayNames[(d.getDay() + 6) % 7]; break; }
         d = addDays(d, 1);
       }
     }

@@ -1124,6 +1124,21 @@
     color: var(--steel);
     border: 1px solid rgba(var(--steel-rgb),0.35);
   }
+  .feedback-sheet .info-sheet { max-height: none; }
+  .feedback-name { font-size: 13.5px; color: var(--muted); margin-bottom: 14px; line-height: 1.4; }
+  .feedback-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .feedback-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 16px 10px; border-radius: 14px; cursor: pointer; font-family: inherit;
+    font-size: 13px; font-weight: 700; border: 1px solid transparent;
+  }
+  .feedback-btn .emoji { font-size: 20px; }
+  .feedback-btn.easy { background: var(--cobalt-dim); color: var(--green-light); border-color: rgba(154,179,106,0.35); }
+  .feedback-btn.ok { background: var(--cobalt-dim); color: var(--cobalt-light); border-color: rgba(var(--cobalt-rgb),0.35); }
+  .feedback-btn.hard { background: var(--steel-dim); color: var(--steel); border-color: rgba(var(--steel-rgb),0.35); }
+  .feedback-btn.failed { background: var(--cobalt-dim); color: #d99a86; border-color: rgba(168,73,58,0.35); }
+  .feedback-btn:active { transform: scale(0.96); }
+  .feedback-skip { text-align: center; margin-top: 14px; font-size: 12px; color: var(--muted); }
   .followup-note {
     font-size: 12.5px;
     color: var(--steel);
@@ -1463,6 +1478,25 @@
       <button class="info-close-btn" id="bestwerteCloseBtn" aria-label="Schließen">&times;</button>
     </div>
     <div class="info-sheet-body" id="bestwerteBody"></div>
+  </div>
+</div>
+
+<div class="info-overlay feedback-sheet" id="exFeedbackOverlay">
+  <div class="info-sheet">
+    <div class="info-sheet-head">
+      <div class="info-sheet-title">Wie war die Übung?</div>
+      <button class="info-close-btn" id="exFeedbackCloseBtn" aria-label="Schließen">&times;</button>
+    </div>
+    <div class="info-sheet-body">
+      <div class="feedback-name" id="exFeedbackName"></div>
+      <div class="feedback-grid">
+        <button class="feedback-btn easy" data-rating="easy"><span class="emoji">&#128522;</span>Einfach</button>
+        <button class="feedback-btn ok" data-rating="ok"><span class="emoji">&#128077;</span>Passt</button>
+        <button class="feedback-btn hard" data-rating="hard"><span class="emoji">&#128549;</span>Schwer</button>
+        <button class="feedback-btn failed" data-rating="failed"><span class="emoji">&#10060;</span>Nicht geschafft</button>
+      </div>
+      <div class="feedback-skip">Zum Überspringen daneben tippen</div>
+    </div>
   </div>
 </div>
 
@@ -2522,6 +2556,7 @@ function finishRunning(dateKey, exIdx, setIdx, kind) {
   advanceSet(dateKey, exIdx, kind);
   if (ex) maybeStartRestAfterSet(dateKey, kind, ex);
   if (newRecord && ex) showPRToast(ex.name, newRecord);
+  if (ex) maybeAskExFeedback(dateKey, kind, exIdx, ex);
 }
 // Vergleicht Bestwerte vor/nach einem Satz; gibt null zurück, wenn es (noch) nichts zu
 // vergleichen gab (allererster Eintrag) oder sich nichts verbessert hat.
@@ -3393,6 +3428,27 @@ const bestwerteSheet = initSheet(null, "bestwerteOverlay", "bestwerteCloseBtn", 
 const menuBestwerteBtn = document.getElementById("menuBestwerteBtn");
 if (menuBestwerteBtn && menuSheet && bestwerteSheet) {
   menuBestwerteBtn.addEventListener("click", () => { menuSheet.close(); bestwerteSheet.open(); });
+}
+
+// Bewertungs-Sheet: erscheint nach dem letzten Satz einer Hauptübung, überspringbar durch
+// Antippen daneben oder das Schließen-Kreuz – ohne Auswahl wird nichts gespeichert.
+const exFeedbackSheet = initSheet(null, "exFeedbackOverlay", "exFeedbackCloseBtn");
+let pendingFeedback = null; // { dateKey, exIdx }
+document.querySelectorAll(".feedback-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    if (pendingFeedback) setExFeedback(pendingFeedback.dateKey, pendingFeedback.exIdx, btn.dataset.rating);
+    pendingFeedback = null;
+    exFeedbackSheet.close();
+    render();
+  });
+});
+function maybeAskExFeedback(dateKey, kind, exIdx, ex) {
+  if (kind !== "main" || !exFeedbackSheet) return;
+  if (!isExerciseDone(dateKey, exIdx, kind)) return;
+  if (getExFeedback(dateKey, exIdx) !== null) return;
+  pendingFeedback = { dateKey, exIdx };
+  document.getElementById("exFeedbackName").textContent = ex.name;
+  exFeedbackSheet.open();
 }
 
 function initSplash() {

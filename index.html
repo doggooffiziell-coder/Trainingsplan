@@ -1258,6 +1258,48 @@
     :root:not([data-theme="dark"]) .theme-toggle-btn .icon-moon { display: block; }
   }
   .account-btn { right: 14px; }
+
+  .rest-timer-overlay {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 950;
+    background: var(--bg-alt);
+    border-top: 1px solid var(--line);
+    box-shadow: 0 -6px 24px var(--shadow-strong);
+    padding: 14px 18px calc(14px + env(safe-area-inset-bottom, 0px));
+    border-radius: 20px 20px 0 0;
+    transform: translateY(110%);
+    transition: transform 0.3s cubic-bezier(.22,.9,.32,1);
+  }
+  .rest-timer-overlay.show { transform: translateY(0); }
+  .rest-timer-overlay.done { border-top-color: var(--green); }
+  .rest-timer-top { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .rest-timer-clock {
+    font-family: "SF Mono", "Roboto Mono", monospace;
+    font-size: 28px; font-weight: 800; font-variant-numeric: tabular-nums;
+    color: var(--cobalt-light); flex-shrink: 0;
+  }
+  .rest-timer-overlay.done .rest-timer-clock { color: var(--green-light); }
+  .rest-timer-info { flex: 1; min-width: 0; }
+  .rest-timer-label { font-size: 10.5px; color: var(--muted); font-weight: 700; letter-spacing: 0.4px; }
+  .rest-timer-name { font-size: 13.5px; font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rest-timer-sound-btn {
+    width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+    background: var(--bg-alt-2); border: 1px solid var(--line); color: var(--muted);
+    display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;
+  }
+  .rest-timer-sound-btn svg { width: 16px; height: 16px; }
+  .rest-timer-sound-btn.muted { color: var(--red); }
+  .rest-timer-btns { display: flex; align-items: center; gap: 10px; }
+  .rest-timer-btn {
+    flex: 1;
+    text-align: center;
+    font-size: 13.5px; font-weight: 700; padding: 13px 12px; border-radius: 14px;
+    background: var(--bg-alt-2); border: 1px solid var(--line); color: var(--ink);
+    cursor: pointer; font-family: inherit;
+  }
+  .rest-timer-btn:active { transform: scale(0.96); }
+  .rest-timer-btn.skip { color: var(--cobalt-light); }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 
@@ -2282,9 +2324,151 @@ function finishRunning(dateKey, exIdx, setIdx, kind) {
   if (!runningStep) return;
   const seconds = Math.floor((Date.now() - runningStep.startedAt) / 1000);
   saveSetTime(dateKey, setTimeKey(exIdx, kind), setIdx, seconds);
+  const ex = getPlanFor(dateKey, kind)[exIdx];
   stopRunning();
   advanceSet(dateKey, exIdx, kind);
+  if (ex) maybeStartRestAfterSet(dateKey, kind, ex);
 }
+
+// ====== Pausen-Timer ======
+// Läuft zeitstempelbasiert (endsAt statt einem reinen Sekunden-Zähler), damit die Anzeige
+// nach Bildschirmsperre, Tab-Wechsel oder Reload wieder den korrekten Reststand zeigt.
+let restTimer = null; // { endsAt, label, done }
+let restTimerInterval = null;
+
+function loadRestTimerState() {
+  try { return JSON.parse(localStorage.getItem("trainingsplan_resttimer") || "null"); } catch (e) { return null; }
+}
+function saveRestTimerState(state) {
+  try {
+    if (state) localStorage.setItem("trainingsplan_resttimer", JSON.stringify(state));
+    else localStorage.removeItem("trainingsplan_resttimer");
+  } catch (e) {}
+}
+
+// Ton per Web Audio API (kein Audio-Asset nötig); der AudioContext wird erst beim ersten
+// Antippen der App erzeugt, weil iOS Safari Ton sonst blockiert.
+let sharedAudioCtx = null;
+function unlockAudio() {
+  if (sharedAudioCtx) return;
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (Ctx) sharedAudioCtx = new Ctx();
+  } catch (e) {}
+}
+function playRestEndSound() {
+  if (!loadSettings().restSoundEnabled || !sharedAudioCtx) return;
+  try {
+    if (sharedAudioCtx.state === "suspended") sharedAudioCtx.resume();
+    const ctx = sharedAudioCtx, now = ctx.currentTime;
+    [0, 0.18].forEach(offset => {
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.0001, now + offset);
+      gain.gain.exponentialRampToValueAtTime(0.22, now + offset + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.16);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now + offset);
+      osc.stop(now + offset + 0.18);
+    });
+  } catch (e) {}
+}
+
+function updateRestSoundBtn() {
+  const btn = document.getElementById("restTimerSoundBtn");
+  if (!btn) return;
+  btn.classList.toggle("muted", !loadSettings().restSoundEnabled);
+}
+function ensureRestTimerEl() {
+  let el = document.getElementById("restTimerOverlay");
+  if (el) return el;
+  el = document.createElement("div");
+  el.id = "restTimerOverlay";
+  el.className = "rest-timer-overlay";
+  el.innerHTML =
+    "<div class='rest-timer-top'>" +
+    "<div class='rest-timer-clock' id='restTimerClock'>00:00</div>" +
+    "<div class='rest-timer-info'><div class='rest-timer-label'>PAUSE</div><div class='rest-timer-name' id='restTimerName'></div></div>" +
+    "<button class='rest-timer-sound-btn' id='restTimerSoundBtn' aria-label='Ton an/aus'>" +
+    "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M11 5 6 9H2v6h4l5 4V5Z'/><path d='M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07'/></svg>" +
+    "</button></div>" +
+    "<div class='rest-timer-btns'>" +
+    "<button class='rest-timer-btn' id='restTimerPlus15'>+15s</button>" +
+    "<button class='rest-timer-btn skip' id='restTimerSkip'>Überspringen</button>" +
+    "</div>";
+  document.body.appendChild(el);
+  document.getElementById("restTimerSoundBtn").addEventListener("click", () => {
+    setSetting("restSoundEnabled", !loadSettings().restSoundEnabled);
+    updateRestSoundBtn();
+  });
+  document.getElementById("restTimerPlus15").addEventListener("click", () => {
+    if (!restTimer) return;
+    restTimer.endsAt += 15000;
+    saveRestTimerState(restTimer);
+    tickRestTimer();
+  });
+  document.getElementById("restTimerSkip").addEventListener("click", stopRestTimer);
+  return el;
+}
+function startRestTimer(seconds, label) {
+  if (!seconds || seconds <= 0) return;
+  restTimer = { endsAt: Date.now() + seconds * 1000, label: label, done: false };
+  saveRestTimerState(restTimer);
+  const el = ensureRestTimerEl();
+  document.getElementById("restTimerName").textContent = label || "";
+  updateRestSoundBtn();
+  el.classList.remove("done");
+  requestAnimationFrame(() => el.classList.add("show"));
+  if (restTimerInterval) clearInterval(restTimerInterval);
+  restTimerInterval = setInterval(tickRestTimer, 250);
+  tickRestTimer();
+}
+function stopRestTimer() {
+  restTimer = null;
+  saveRestTimerState(null);
+  if (restTimerInterval) { clearInterval(restTimerInterval); restTimerInterval = null; }
+  const el = document.getElementById("restTimerOverlay");
+  if (el) el.classList.remove("show");
+}
+function tickRestTimer() {
+  if (!restTimer) return;
+  const el = document.getElementById("restTimerOverlay");
+  const clockEl = document.getElementById("restTimerClock");
+  if (!el || !clockEl) return;
+  const remainingMs = restTimer.endsAt - Date.now();
+  clockEl.textContent = formatDuration(Math.max(0, Math.ceil(remainingMs / 1000)));
+  if (remainingMs <= 0 && !restTimer.done) {
+    restTimer.done = true;
+    saveRestTimerState(restTimer);
+    el.classList.add("done");
+    playRestEndSound();
+    if (navigator.vibrate) { try { navigator.vibrate([200, 100, 200]); } catch (e) {} }
+    setTimeout(() => { if (restTimer && restTimer.done) stopRestTimer(); }, 3000);
+  }
+}
+// Nach einem abgehakten Satz die Pause starten, sofern im Zirkel noch etwas offen ist –
+// ist der Zirkel schon fertig, gibt es nichts mehr, wofür sich eine Pause lohnt.
+function maybeStartRestAfterSet(dateKey, kind, ex) {
+  const totals = getSetTotals(dateKey, kind);
+  if (totals.done >= totals.total) return;
+  startRestTimer(ex.rest, ex.name);
+}
+// Beim Start prüfen, ob noch ein nicht abgelaufener Pausen-Timer offen war (z.B. nach
+// Bildschirmsperre oder Reload mitten in der Pause) und ihn dann fortsetzen.
+(function resumeRestTimer() {
+  const saved = loadRestTimerState();
+  if (!saved) return;
+  if (!saved.endsAt || saved.endsAt <= Date.now()) { saveRestTimerState(null); return; }
+  restTimer = saved;
+  const el = ensureRestTimerEl();
+  document.getElementById("restTimerName").textContent = saved.label || "";
+  updateRestSoundBtn();
+  el.classList.add("show");
+  restTimerInterval = setInterval(tickRestTimer, 250);
+  tickRestTimer();
+})();
+
 function resetDay(dateKey) {
   const data = loadJSON("trainingsplan_checks");
   data[dateKey] = {};
@@ -3171,6 +3355,7 @@ function initSplash() {
   let trackStartX = 0, trackStartY = 0, trackTarget = null, tracking = false, moved = false;
 
   document.addEventListener("pointerdown", (e) => {
+    unlockAudio(); // iOS erlaubt Ton erst nach einer echten Nutzer-Interaktion
     if (e.pointerType === "mouse" && e.button !== 0) return;
     tracking = true;
     moved = false;

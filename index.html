@@ -557,7 +557,7 @@
     font-family: inherit; cursor: pointer; text-align: left;
   }
   .menu-item:active { background: var(--bg); }
-  .menu-item-icon { font-size: 18px; flex-shrink: 0; }
+  .menu-item-icon { display: flex; align-items: center; flex-shrink: 0; color: var(--cobalt-light); }
   .menu-item-label { flex: 1; font-size: 14.5px; font-weight: 700; color: var(--ink); }
   .menu-item-chev { color: var(--muted); font-size: 18px; font-weight: 700; }
 
@@ -585,7 +585,7 @@
   .recap-label { font-size: 13.5px; font-weight: 700; color: var(--ink); }
   .recap-value { font-size: 22px; font-weight: 800; color: var(--cobalt-light); font-variant-numeric: tabular-nums; }
   .recap-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
-  .recap-section-title { font-size: 12.5px; font-weight: 700; color: var(--muted); margin: 18px 0 8px; }
+  .recap-section-title { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; color: var(--muted); margin: 18px 0 8px; }
   .recap-list { display: flex; flex-direction: column; gap: 6px; }
   .recap-list-item {
     font-size: 13px; font-weight: 600; color: var(--ink);
@@ -602,7 +602,8 @@
   }
   .badge-card.unlocked { border-color: rgba(var(--cobalt-rgb),0.35); }
   .badge-card.locked { opacity: 0.5; }
-  .badge-icon { font-size: 26px; line-height: 1; margin-bottom: 4px; }
+  .badge-icon { display: flex; align-items: center; justify-content: center; color: var(--cobalt-light); margin-bottom: 4px; }
+  .badge-card.locked .badge-icon { color: var(--muted); }
   .badge-label { font-size: 12.5px; font-weight: 700; color: var(--ink); }
   .badge-desc { font-size: 10.5px; color: var(--muted); line-height: 1.35; }
 
@@ -921,7 +922,6 @@
     padding-bottom: 6px;
     border-bottom: 1px solid var(--line-soft);
   }
-  .warmup-head .icon { font-size: 14px; }
   .main-head {
     font-size: 12.5px;
     font-weight: 700;
@@ -1069,6 +1069,7 @@
     padding: 0;
   }
   .ex-info-btn:active { background: var(--bg-alt-2); color: var(--ink); border-color: var(--cobalt-light); }
+  .ui-icon { display: inline-block; vertical-align: -0.2em; flex-shrink: 0; }
   .circuit-go {
     flex-shrink: 0;
     font-size: 12px; font-weight: 800; color: #ffffff;
@@ -1211,7 +1212,7 @@
     padding: 16px 10px; border-radius: 14px; cursor: pointer; font-family: inherit;
     font-size: 13px; font-weight: 700; border: 1px solid transparent;
   }
-  .feedback-btn .emoji { font-size: 20px; }
+  .feedback-btn .ui-icon { margin-bottom: 2px; }
   .feedback-btn.easy { background: var(--cobalt-dim); color: var(--green-light); border-color: rgba(154,179,106,0.35); }
   .feedback-btn.ok { background: var(--cobalt-dim); color: var(--cobalt-light); border-color: rgba(var(--cobalt-rgb),0.35); }
   .feedback-btn.hard { background: var(--steel-dim); color: var(--steel); border-color: rgba(var(--steel-rgb),0.35); }
@@ -1351,12 +1352,9 @@
     opacity: 0; transform: translateY(-3px); visibility: hidden;
     transition: opacity 0.25s ease, transform 0.25s ease;
   }
-  .save-tag::before {
-    content: "✓";
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 13px; height: 13px; border-radius: 50%;
+  .save-tag .ui-icon {
+    border-radius: 50%;
     background: rgba(100,125,63,0.22); color: var(--green-light);
-    font-size: 9px; font-weight: 900;
   }
   .save-tag.show { visibility: visible; opacity: 1; transform: translateY(0); }
 
@@ -1542,32 +1540,32 @@
     <div class="info-sheet-body">
       <div class="menu-list">
         <button class="menu-item" id="menuStatistikBtn">
-          <span class="menu-item-icon">&#128202;</span>
+          <span class="menu-item-icon"><canvas class="ui-icon" data-icon-name="chart-bar" data-size="20" width="20" height="20"></canvas></span>
           <span class="menu-item-label">Statistik</span>
           <span class="menu-item-chev">&#8250;</span>
         </button>
         <button class="menu-item" id="menuBestwerteBtn">
-          <span class="menu-item-icon">&#127942;</span>
+          <span class="menu-item-icon"><canvas class="ui-icon" data-icon-name="trophy" data-size="20" width="20" height="20"></canvas></span>
           <span class="menu-item-label">Bestwerte</span>
           <span class="menu-item-chev">&#8250;</span>
         </button>
         <button class="menu-item" id="menuRecapBtn">
-          <span class="menu-item-icon">&#128197;</span>
+          <span class="menu-item-icon"><canvas class="ui-icon" data-icon-name="calendar" data-size="20" width="20" height="20"></canvas></span>
           <span class="menu-item-label">Wochenrückblick</span>
           <span class="menu-item-chev">&#8250;</span>
         </button>
         <button class="menu-item" id="menuBadgesBtn">
-          <span class="menu-item-icon">&#127894;</span>
+          <span class="menu-item-icon"><canvas class="ui-icon" data-icon-name="medal" data-size="20" width="20" height="20"></canvas></span>
           <span class="menu-item-label">Abzeichen</span>
           <span class="menu-item-chev">&#8250;</span>
         </button>
         <button class="menu-item" id="menuDataBtn">
-          <span class="menu-item-icon">&#128190;</span>
+          <span class="menu-item-icon"><canvas class="ui-icon" data-icon-name="tray" data-size="20" width="20" height="20"></canvas></span>
           <span class="menu-item-label">Daten</span>
           <span class="menu-item-chev">&#8250;</span>
         </button>
         <button class="menu-item" id="menuAnleitungBtn">
-          <span class="menu-item-icon">&#128214;</span>
+          <span class="menu-item-icon"><canvas class="ui-icon" data-icon-name="book" data-size="20" width="20" height="20"></canvas></span>
           <span class="menu-item-label">Anleitung</span>
           <span class="menu-item-chev">&#8250;</span>
         </button>
@@ -1625,15 +1623,15 @@
     <div class="info-sheet-body">
       <div class="menu-list">
         <button class="menu-item" id="dataExportJsonBtn">
-          <span class="menu-item-icon">&#128229;</span>
+          <span class="menu-item-icon"><canvas class="ui-icon" data-icon-name="download" data-size="20" width="20" height="20"></canvas></span>
           <span class="menu-item-label">Als JSON exportieren</span>
         </button>
         <button class="menu-item" id="dataExportCsvBtn">
-          <span class="menu-item-icon">&#128202;</span>
+          <span class="menu-item-icon"><canvas class="ui-icon" data-icon-name="chart-bar" data-size="20" width="20" height="20"></canvas></span>
           <span class="menu-item-label">Gewichte als CSV exportieren</span>
         </button>
         <button class="menu-item" id="dataImportBtn">
-          <span class="menu-item-icon">&#128228;</span>
+          <span class="menu-item-icon"><canvas class="ui-icon" data-icon-name="upload" data-size="20" width="20" height="20"></canvas></span>
           <span class="menu-item-label">Aus JSON importieren</span>
         </button>
         <input type="file" id="dataImportInput" accept="application/json,.json" style="display:none;">
@@ -1662,10 +1660,10 @@
     <div class="info-sheet-body">
       <div class="feedback-name" id="exFeedbackName"></div>
       <div class="feedback-grid">
-        <button class="feedback-btn easy" data-rating="easy"><span class="emoji">&#128522;</span>Einfach</button>
-        <button class="feedback-btn ok" data-rating="ok"><span class="emoji">&#128077;</span>Passt</button>
-        <button class="feedback-btn hard" data-rating="hard"><span class="emoji">&#128549;</span>Schwer</button>
-        <button class="feedback-btn failed" data-rating="failed"><span class="emoji">&#10060;</span>Nicht geschafft</button>
+        <button class="feedback-btn easy" data-rating="easy"><canvas class="ui-icon" data-icon-name="arrow-up" data-size="22" width="22" height="22"></canvas>Einfach</button>
+        <button class="feedback-btn ok" data-rating="ok"><canvas class="ui-icon" data-icon-name="check" data-size="22" width="22" height="22"></canvas>Passt</button>
+        <button class="feedback-btn hard" data-rating="hard"><canvas class="ui-icon" data-icon-name="wave" data-size="22" width="22" height="22"></canvas>Schwer</button>
+        <button class="feedback-btn failed" data-rating="failed"><canvas class="ui-icon" data-icon-name="cross" data-size="22" width="22" height="22"></canvas>Nicht geschafft</button>
       </div>
       <div class="feedback-skip">Zum Überspringen daneben tippen</div>
     </div>
@@ -2289,7 +2287,7 @@ function renderCircuit(dateKey, kind, limited) {
       : "";
 
     html += "<div class='circuit-step " + status + (setLogHTML ? " has-log" : "") + "' data-kind='" + kind + "' data-ex='" + step.exIdx + "' data-set='" + step.setIdx + "'>"
-      + "<canvas class='circuit-num-canvas' width='26' height='26' data-icon='num' data-num='" + (step.setIdx + 1) + "' data-done='" + (done ? 1 : 0) + "'></canvas>"
+      + "<canvas class='circuit-num-canvas' width='26' height='26' data-size='26' data-icon='num' data-num='" + (step.setIdx + 1) + "' data-done='" + (done ? 1 : 0) + "'></canvas>"
       + "<div class='circuit-info'>"
       + "<div class='circuit-name'>" + ex.name + (status === "running" ? " <span class='running-tag'>läuft&hellip;</span>" : "") + "</div>"
       + "<div class='circuit-target'>" + targetLine + "</div>"
@@ -2769,6 +2767,7 @@ function showToast(html) {
     document.body.appendChild(el);
   }
   el.innerHTML = html;
+  drawAllIconCanvases(el);
   el.classList.remove("show");
   void el.offsetWidth;
   el.classList.add("show");
@@ -2777,7 +2776,7 @@ function showToast(html) {
 }
 function showPRToast(exerciseName, improved) {
   const label = improved.includes("weight") ? "Gewicht" : improved.includes("reps") ? "Wiederholungen" : "Volumen";
-  showToast("&#127942; Neuer Rekord (" + label + ") &ndash; " + exerciseName);
+  showToast(iconHTML("trophy", 15) + "Neuer Rekord (" + label + ") &ndash; " + exerciseName);
 }
 
 // ====== Pausen-Timer ======
@@ -3074,6 +3073,9 @@ function render() {
     updateLiveBits();
     return;
   }
+  // Läuft nach jedem render()-Durchlauf, unabhängig davon, welcher Zweig/Return getroffen
+  // wurde – zeichnet alle neu ins DOM eingefügten Icon-Canvases.
+  setTimeout(() => drawAllIconCanvases(), 0);
   const now = new Date();
   const realToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const viewWeekStart = addDays(getMonday(realToday), weekOffset * 7);
@@ -3152,7 +3154,7 @@ function render() {
     "<div class='notes-box'>" +
     "<label>Notiz für " + (isToday ? "heute" : titlePrefix.toLowerCase()) + "</label>" +
     "<textarea id='noteInput' placeholder='z.B. Gewicht, Gefühl, was du ändern willst...'>" + noteText.replace(/</g, "&lt;") + "</textarea>" +
-    "<div class='save-tag' id='saveTag'>Gespeichert</div>" +
+    "<div class='save-tag' id='saveTag'>" + iconHTML('check', 9) + "Gespeichert</div>" +
     "</div>";
 
   if (selectedDate < planStartDate) {
@@ -3178,7 +3180,7 @@ function render() {
     if (movedTo) {
       const followupKey = isoDate(addDays(keyToDate(movedTo), 1));
       if (needsFollowupDecision(followupKey) && getTrainDecision(followupKey) === null) {
-        followupHintHTML = "<div class='followup-hint'>&#9432; Dadurch liegen zwei Trainingstage direkt hintereinander (" +
+        followupHintHTML = "<div class='followup-hint'>" + iconHTML("info-circle", 13) + "Dadurch liegen zwei Trainingstage direkt hintereinander (" +
           formatDateLabel(movedTo) + " und " + formatDateLabel(followupKey) + "). Am " + fullDayNames[(keyToDate(followupKey).getDay() + 6) % 7] +
           " wirst du gefragt, ob du trotzdem trainieren willst.</div>";
       }
@@ -3216,8 +3218,8 @@ function render() {
         "<div class='day-status-row'>" +
         "<div class='status-label'>Willst du trotzdem trainieren?</div>" +
         "<div class='status-btns'>" +
-        "<button class='status-btn yes' id='followupYesBtn'>&#10003; Ja</button>" +
-        "<button class='status-btn no' id='followupNoBtn'>&#10007; Nein</button>" +
+        "<button class='status-btn yes' id='followupYesBtn'>" + iconHTML("check", 13) + "Ja</button>" +
+        "<button class='status-btn no' id='followupNoBtn'>" + iconHTML("cross", 13) + "Nein</button>" +
         "</div></div>" +
         notesHTML +
         "</div></div>";
@@ -3281,19 +3283,19 @@ function render() {
   const warmupRows = renderCircuit(dateKey, "warm");
 
     const statusRowHTML = status
-      ? "<div class='status-badge " + status + (justSubmitted ? " just-set" : "") + "'>" + (status === "success" ? "&#10003; Erfolgreich" : "&#10007; Nicht erfolgreich") + "</div>" +
+      ? "<div class='status-badge " + status + (justSubmitted ? " just-set" : "") + "'>" + (status === "success" ? iconHTML("check", 13) + "Erfolgreich" : iconHTML("cross", 13) + "Nicht erfolgreich") + "</div>" +
         "<button class='change-time-btn' id='changeStatusBtn'>Ändern</button>"
       : "<div class='status-label'>Wie lief das Training?</div>" +
         "<div class='status-btns'>" +
-        "<button class='status-btn success' id='markSuccessBtn'>&#10003; Erfolgreich</button>" +
-        "<button class='status-btn fail' id='markFailBtn'>&#10007; Nicht erfolgreich</button>" +
+        "<button class='status-btn success' id='markSuccessBtn'>" + iconHTML("check", 13) + "Erfolgreich</button>" +
+        "<button class='status-btn fail' id='markFailBtn'>" + iconHTML("cross", 13) + "Nicht erfolgreich</button>" +
         "</div>";
 
     const feedbackHTML = status
       ? "<div class='notes-box" + (justSubmitted ? " just-set" : "") + "'>" +
         "<label>Feedback für " + titlePrefix.toLowerCase() + "</label>" +
         "<textarea id='noteInput' placeholder='Wie ist es gelaufen? Was war gut, was schwer?'>" + noteText.replace(/</g, "&lt;") + "</textarea>" +
-        "<div class='save-tag' id='saveTag'>Gespeichert</div>" +
+        "<div class='save-tag' id='saveTag'>" + iconHTML('check', 9) + "Gespeichert</div>" +
         "</div>"
       : "";
 
@@ -3312,7 +3314,7 @@ function render() {
       "<div class='ex-list-collapsed' id='exListPast' style='display:" + (openExDateKey === dateKey ? "block" : "none") + ";'>" +
       "<div class='main-head'>Übungen</div>" +
       "<div class='ex-list'>" + rows + "</div>" +
-      "<div class='warmup-head' style='margin-top:16px;'><span class='icon'>&#9889;</span> Aufwärmen</div>" +
+      "<div class='warmup-head' style='margin-top:16px;'>" + iconHTML("bolt", 14) + " Aufwärmen</div>" +
       "<div class='ex-list'>" + warmupRows + "</div>" +
       "</div>" +
       feedbackHTML +
@@ -3415,14 +3417,14 @@ function render() {
 
   const resetLabel = isMainTab ? "Übungen zurücksetzen" : "Aufwärmen zurücksetzen";
   const lockHintHTML = beforeStart
-    ? "<div class='lock-hint'>&#128274; Nur Vorschau bis " + pad(startHour) + ":" + pad(startMin) + " Uhr &ndash; Abhaken geht erst, wenn's losgeht</div>"
+    ? "<div class='lock-hint'>" + iconHTML("lock", 13) + "Nur Vorschau bis " + pad(startHour) + ":" + pad(startMin) + " Uhr &ndash; Abhaken geht erst, wenn's losgeht</div>"
     : "";
 
   card.innerHTML =
     "<div class='session-shell'>" +
     "<div class='side-bar'>" +
     "<div class='side-fill" + (complete ? " complete" : "") + "' id='sideFill' style='height:" + pct + "%;'></div>" +
-    "<div class='side-dot" + (complete ? " complete" : "") + "' id='sideDot' style='bottom:" + pct + "%; display:" + (isToday && (inSlot || complete) ? "flex" : "none") + ";'>" + (complete ? "&#10003;" : "") + "</div>" +
+    "<div class='side-dot" + (complete ? " complete" : "") + "' id='sideDot' style='bottom:" + pct + "%; display:" + (isToday && (inSlot || complete) ? "flex" : "none") + ";'>" + (complete ? iconHTML("check", 10) : "") + "</div>" +
     "</div>" +
     "<div class='session'>" +
     "<h2>" + titlePrefix + (isToday ? " ist Trainingstag" : "") + "</h2>" +
@@ -3510,7 +3512,10 @@ function drawBadgeIcons() {
   document.querySelectorAll("canvas[data-icon='num']").forEach(canvas => {
     const ctx = canvas.getContext("2d");
     const dpr = Math.max(window.devicePixelRatio || 1, 2);
-    const size = parseInt(canvas.getAttribute("width"), 10) || 16;
+    // Größe aus einem eigenen, unveränderten Attribut lesen – canvas.width wird unten selbst
+    // überschrieben (DPR-Skalierung), darf also nicht zugleich als Quelle dienen, sonst
+    // verdoppelt sich die Größe bei jedem erneuten Aufruf auf demselben Canvas.
+    const size = parseInt(canvas.dataset.size, 10) || 16;
     canvas.width = size * dpr;
     canvas.height = size * dpr;
     canvas.style.width = size + "px";
@@ -3536,6 +3541,192 @@ function drawBadgeIcons() {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(num, cx, cy + size * 0.03);
+  });
+}
+
+// ====== Canvas-Icons (ersetzen alle Emojis im Interface) ======
+// Baut das <canvas>-Tag für einen benannten Icon-Umriss; die Farbe wird beim Zeichnen aus
+// der umgebenden CSS-color-Eigenschaft des Canvas gelesen (verhält sich wie currentColor).
+function iconHTML(name, size, extraClass) {
+  size = size || 18;
+  return "<canvas class='ui-icon" + (extraClass ? " " + extraClass : "") + "' data-icon-name='" + name + "' data-size='" + size + "' width='" + size + "' height='" + size + "'></canvas>";
+}
+function drawIconPath(ctx, name, s) {
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  switch (name) {
+    case "check":
+      ctx.lineWidth = s * 0.14;
+      ctx.beginPath();
+      ctx.moveTo(s * 0.16, s * 0.52); ctx.lineTo(s * 0.42, s * 0.78); ctx.lineTo(s * 0.86, s * 0.22);
+      ctx.stroke();
+      break;
+    case "cross":
+      ctx.lineWidth = s * 0.14;
+      ctx.beginPath();
+      ctx.moveTo(s * 0.22, s * 0.22); ctx.lineTo(s * 0.78, s * 0.78);
+      ctx.moveTo(s * 0.78, s * 0.22); ctx.lineTo(s * 0.22, s * 0.78);
+      ctx.stroke();
+      break;
+    case "flame":
+      ctx.beginPath();
+      ctx.moveTo(s * 0.5, s * 0.04);
+      ctx.bezierCurveTo(s * 0.76, s * 0.28, s * 0.6, s * 0.44, s * 0.7, s * 0.56);
+      ctx.bezierCurveTo(s * 0.86, s * 0.72, s * 0.78, s * 0.96, s * 0.5, s * 0.96);
+      ctx.bezierCurveTo(s * 0.22, s * 0.96, s * 0.14, s * 0.72, s * 0.3, s * 0.56);
+      ctx.bezierCurveTo(s * 0.36, s * 0.49, s * 0.32, s * 0.4, s * 0.36, s * 0.3);
+      ctx.bezierCurveTo(s * 0.42, s * 0.4, s * 0.47, s * 0.38, s * 0.45, s * 0.26);
+      ctx.bezierCurveTo(s * 0.44, s * 0.16, s * 0.47, s * 0.09, s * 0.5, s * 0.04);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    case "dumbbell":
+      ctx.lineWidth = s * 0.1;
+      ctx.beginPath(); ctx.moveTo(s * 0.26, s * 0.5); ctx.lineTo(s * 0.74, s * 0.5); ctx.stroke();
+      ctx.lineWidth = s * 0.17;
+      ctx.beginPath(); ctx.moveTo(s * 0.16, s * 0.34); ctx.lineTo(s * 0.16, s * 0.66); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(s * 0.84, s * 0.34); ctx.lineTo(s * 0.84, s * 0.66); ctx.stroke();
+      ctx.lineWidth = s * 0.1;
+      ctx.beginPath(); ctx.moveTo(s * 0.07, s * 0.4); ctx.lineTo(s * 0.07, s * 0.6); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(s * 0.93, s * 0.4); ctx.lineTo(s * 0.93, s * 0.6); ctx.stroke();
+      break;
+    case "trophy":
+      ctx.lineWidth = s * 0.08;
+      ctx.beginPath();
+      ctx.moveTo(s * 0.32, s * 0.14); ctx.lineTo(s * 0.68, s * 0.14); ctx.lineTo(s * 0.63, s * 0.52);
+      ctx.quadraticCurveTo(s * 0.5, s * 0.62, s * 0.37, s * 0.52);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(s * 0.32, s * 0.2); ctx.quadraticCurveTo(s * 0.08, s * 0.2, s * 0.15, s * 0.4); ctx.quadraticCurveTo(s * 0.19, s * 0.48, s * 0.34, s * 0.42); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(s * 0.68, s * 0.2); ctx.quadraticCurveTo(s * 0.92, s * 0.2, s * 0.85, s * 0.4); ctx.quadraticCurveTo(s * 0.81, s * 0.48, s * 0.66, s * 0.42); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(s * 0.5, s * 0.59); ctx.lineTo(s * 0.5, s * 0.74); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(s * 0.33, s * 0.88); ctx.lineTo(s * 0.37, s * 0.74); ctx.lineTo(s * 0.63, s * 0.74); ctx.lineTo(s * 0.67, s * 0.88);
+      ctx.closePath();
+      ctx.stroke();
+      break;
+    case "sparkle":
+      ctx.beginPath();
+      ctx.moveTo(s * 0.5, s * 0.04); ctx.lineTo(s * 0.59, s * 0.41); ctx.lineTo(s * 0.96, s * 0.5);
+      ctx.lineTo(s * 0.59, s * 0.59); ctx.lineTo(s * 0.5, s * 0.96); ctx.lineTo(s * 0.41, s * 0.59);
+      ctx.lineTo(s * 0.04, s * 0.5); ctx.lineTo(s * 0.41, s * 0.41);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    case "calendar":
+      ctx.lineWidth = s * 0.08;
+      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(s * 0.1, s * 0.18, s * 0.8, s * 0.72, s * 0.1); ctx.stroke(); }
+      else { ctx.strokeRect(s * 0.1, s * 0.18, s * 0.8, s * 0.72); }
+      ctx.beginPath(); ctx.moveTo(s * 0.1, s * 0.4); ctx.lineTo(s * 0.9, s * 0.4); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(s * 0.3, s * 0.06); ctx.lineTo(s * 0.3, s * 0.26); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(s * 0.7, s * 0.06); ctx.lineTo(s * 0.7, s * 0.26); ctx.stroke();
+      break;
+    case "medal":
+      ctx.lineWidth = s * 0.08;
+      ctx.beginPath(); ctx.moveTo(s * 0.37, s * 0.08); ctx.lineTo(s * 0.47, s * 0.4); ctx.lineTo(s * 0.35, s * 0.4); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(s * 0.63, s * 0.08); ctx.lineTo(s * 0.53, s * 0.4); ctx.lineTo(s * 0.65, s * 0.4); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.arc(s * 0.5, s * 0.64, s * 0.3, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(s * 0.5, s * 0.64, s * 0.13, 0, Math.PI * 2); ctx.fill();
+      break;
+    case "tray":
+      ctx.lineWidth = s * 0.08;
+      ctx.beginPath(); ctx.moveTo(s * 0.5, s * 0.08); ctx.lineTo(s * 0.5, s * 0.56); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(s * 0.3, s * 0.38); ctx.lineTo(s * 0.5, s * 0.6); ctx.lineTo(s * 0.7, s * 0.38); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(s * 0.1, s * 0.68); ctx.lineTo(s * 0.1, s * 0.9); ctx.lineTo(s * 0.9, s * 0.9); ctx.lineTo(s * 0.9, s * 0.68); ctx.stroke();
+      break;
+    case "download":
+      ctx.lineWidth = s * 0.1;
+      ctx.beginPath(); ctx.moveTo(s * 0.5, s * 0.08); ctx.lineTo(s * 0.5, s * 0.62); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(s * 0.27, s * 0.42); ctx.lineTo(s * 0.5, s * 0.66); ctx.lineTo(s * 0.73, s * 0.42); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(s * 0.13, s * 0.86); ctx.lineTo(s * 0.87, s * 0.86); ctx.stroke();
+      break;
+    case "upload":
+      ctx.lineWidth = s * 0.1;
+      ctx.beginPath(); ctx.moveTo(s * 0.5, s * 0.66); ctx.lineTo(s * 0.5, s * 0.1); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(s * 0.27, s * 0.32); ctx.lineTo(s * 0.5, s * 0.06); ctx.lineTo(s * 0.73, s * 0.32); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(s * 0.13, s * 0.86); ctx.lineTo(s * 0.87, s * 0.86); ctx.stroke();
+      break;
+    case "chart-bar":
+      ctx.fillRect(s * 0.12, s * 0.55, s * 0.2, s * 0.37);
+      ctx.fillRect(s * 0.4, s * 0.33, s * 0.2, s * 0.59);
+      ctx.fillRect(s * 0.68, s * 0.12, s * 0.2, s * 0.8);
+      break;
+    case "chart-line":
+      ctx.lineWidth = s * 0.1;
+      ctx.beginPath();
+      ctx.moveTo(s * 0.08, s * 0.76); ctx.lineTo(s * 0.36, s * 0.5); ctx.lineTo(s * 0.56, s * 0.62); ctx.lineTo(s * 0.9, s * 0.2);
+      ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(s * 0.68, s * 0.2); ctx.lineTo(s * 0.9, s * 0.2); ctx.lineTo(s * 0.9, s * 0.42); ctx.stroke();
+      break;
+    case "lock":
+      ctx.lineWidth = s * 0.09;
+      ctx.beginPath(); ctx.arc(s * 0.5, s * 0.38, s * 0.22, Math.PI, 0); ctx.stroke();
+      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(s * 0.2, s * 0.38, s * 0.6, s * 0.48, s * 0.08); ctx.fill(); }
+      else { ctx.fillRect(s * 0.2, s * 0.38, s * 0.6, s * 0.48); }
+      break;
+    case "info-circle":
+      ctx.lineWidth = s * 0.09;
+      ctx.beginPath(); ctx.arc(s * 0.5, s * 0.5, s * 0.42, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(s * 0.5, s * 0.28, s * 0.055, 0, Math.PI * 2); ctx.fill();
+      ctx.lineWidth = s * 0.12;
+      ctx.beginPath(); ctx.moveTo(s * 0.5, s * 0.42); ctx.lineTo(s * 0.5, s * 0.72); ctx.stroke();
+      break;
+    case "bolt":
+      ctx.beginPath();
+      ctx.moveTo(s * 0.56, s * 0.03); ctx.lineTo(s * 0.16, s * 0.58); ctx.lineTo(s * 0.44, s * 0.58);
+      ctx.lineTo(s * 0.38, s * 0.97); ctx.lineTo(s * 0.84, s * 0.38); ctx.lineTo(s * 0.56, s * 0.38);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    case "arrow-up":
+      ctx.lineWidth = s * 0.13;
+      ctx.beginPath(); ctx.moveTo(s * 0.5, s * 0.86); ctx.lineTo(s * 0.5, s * 0.2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(s * 0.25, s * 0.43); ctx.lineTo(s * 0.5, s * 0.14); ctx.lineTo(s * 0.75, s * 0.43); ctx.stroke();
+      break;
+    case "wave":
+      ctx.lineWidth = s * 0.12;
+      ctx.beginPath();
+      ctx.moveTo(s * 0.06, s * 0.6);
+      ctx.bezierCurveTo(s * 0.2, s * 0.28, s * 0.32, s * 0.28, s * 0.42, s * 0.56);
+      ctx.bezierCurveTo(s * 0.52, s * 0.82, s * 0.62, s * 0.82, s * 0.72, s * 0.48);
+      ctx.bezierCurveTo(s * 0.78, s * 0.3, s * 0.86, s * 0.3, s * 0.94, s * 0.44);
+      ctx.stroke();
+      break;
+    case "book":
+      ctx.lineWidth = s * 0.08;
+      ctx.beginPath(); ctx.moveTo(s * 0.5, s * 0.18); ctx.lineTo(s * 0.5, s * 0.86); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(s * 0.5, s * 0.18); ctx.quadraticCurveTo(s * 0.3, s * 0.08, s * 0.1, s * 0.16); ctx.lineTo(s * 0.1, s * 0.78);
+      ctx.quadraticCurveTo(s * 0.3, s * 0.72, s * 0.5, s * 0.86);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(s * 0.5, s * 0.18); ctx.quadraticCurveTo(s * 0.7, s * 0.08, s * 0.9, s * 0.16); ctx.lineTo(s * 0.9, s * 0.78);
+      ctx.quadraticCurveTo(s * 0.7, s * 0.72, s * 0.5, s * 0.86);
+      ctx.stroke();
+      break;
+  }
+}
+// Zeichnet alle neu eingefügten Icon-Canvases in einem Bereich (Standard: ganzes Dokument);
+// die Farbe kommt aus der ererbten CSS-color-Eigenschaft, verhält sich also wie currentColor.
+function drawAllIconCanvases(root) {
+  (root || document).querySelectorAll("canvas[data-icon-name]").forEach(canvas => {
+    const name = canvas.dataset.iconName;
+    const dpr = Math.max(window.devicePixelRatio || 1, 2);
+    // Größe aus dem eigenen, unveränderten data-size lesen (nicht aus dem width-Attribut,
+    // das gleich selbst mit der DPR-Skalierung überschrieben wird) – so bleibt die Funktion
+    // beliebig oft wiederholbar, ohne dass sich das Icon bei jedem Aufruf vergrößert.
+    const size = parseInt(canvas.dataset.size, 10) || 18;
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+    canvas.style.width = size + "px";
+    canvas.style.height = size + "px";
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, size, size);
+    const color = getComputedStyle(canvas).color;
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    drawIconPath(ctx, name, size);
   });
 }
 
@@ -3567,7 +3758,7 @@ function updateLiveBits() {
     fill.classList.add("complete");
     dot.classList.add("complete");
     dot.style.display = "flex";
-    dot.innerHTML = "&#10003;";
+    if (!dot.querySelector("canvas")) { dot.innerHTML = iconHTML("check", 10); drawAllIconCanvases(dot); }
   } else if (inSlot) {
     dot.style.display = "flex";
   }
@@ -3675,7 +3866,7 @@ function initSheet(btnId, overlayId, closeBtnId, onOpen) {
   const overlay = document.getElementById(overlayId);
   const closeBtn = document.getElementById(closeBtnId);
   if (!overlay || !closeBtn) return null;
-  const open = () => { if (onOpen) onOpen(); overlay.classList.add("open"); };
+  const open = () => { if (onOpen) onOpen(); overlay.classList.add("open"); drawAllIconCanvases(overlay); };
   const close = () => overlay.classList.remove("open");
   if (btn) btn.addEventListener("click", open);
   closeBtn.addEventListener("click", close);
@@ -3956,11 +4147,11 @@ function renderWeeklyRecapContent(weekOffsetForRecap) {
   let html = "<div class='recap-row'><span class='recap-label'>Diese Woche</span><span class='recap-value'>" + r.thisWeek.done + "/" + r.thisWeek.total + "</span></div>"
     + "<div class='recap-sub'>" + cmpText + "</div>";
   if (r.newRecords.length) {
-    html += "<div class='recap-section-title'>&#127942; Neue Rekorde</div><div class='recap-list'>"
+    html += "<div class='recap-section-title'>" + iconHTML("trophy", 14) + "Neue Rekorde</div><div class='recap-list'>"
       + r.newRecords.map(n => "<div class='recap-list-item'>" + n + "</div>").join("") + "</div>";
   }
   if (r.bestProgressEx) {
-    html += "<div class='recap-section-title'>&#128200; Größter Fortschritt</div><div class='recap-list'><div class='recap-list-item'>" + r.bestProgressEx + "</div></div>";
+    html += "<div class='recap-section-title'>" + iconHTML("chart-line", 14) + "Größter Fortschritt</div><div class='recap-list'><div class='recap-list-item'>" + r.bestProgressEx + "</div></div>";
   }
   if (!r.newRecords.length && !r.bestProgressEx) {
     html += "<div class='recap-empty'>Noch keine Gewichte/Wdh. geloggt &ndash; sobald du welche einträgst, siehst du hier Rekorde und Fortschritt.</div>";
@@ -3970,14 +4161,14 @@ function renderWeeklyRecapContent(weekOffsetForRecap) {
 
 // ====== Abzeichen ======
 const BADGES = [
-  { id: "streak3", icon: "🔥", label: "3er Serie", desc: "3 Trainingstage am Stück geschafft", check: s => s.longestStreak >= 3 },
-  { id: "streak5", icon: "🔥", label: "5er Serie", desc: "5 Trainingstage am Stück geschafft", check: s => s.longestStreak >= 5 },
-  { id: "streak10", icon: "🔥", label: "10er Serie", desc: "10 Trainingstage am Stück geschafft", check: s => s.longestStreak >= 10 },
-  { id: "units10", icon: "💪", label: "10 Einheiten", desc: "10 Trainingseinheiten abgeschlossen", check: s => s.completed >= 10 },
-  { id: "units25", icon: "💪", label: "25 Einheiten", desc: "25 Trainingseinheiten abgeschlossen", check: s => s.completed >= 25 },
-  { id: "units50", icon: "💪", label: "50 Einheiten", desc: "50 Trainingseinheiten abgeschlossen", check: s => s.completed >= 50 },
-  { id: "firstRecord", icon: "🏆", label: "Erster Rekord", desc: "Erstes Gewicht oder Wdh. geloggt", check: s => s.hasAnySetLog },
-  { id: "perfectWeek", icon: "✨", label: "Perfekte Woche", desc: "Eine ganze Woche komplett geschafft", check: s => s.hasAnyPerfectWeek }
+  { id: "streak3", icon: "flame", label: "3er Serie", desc: "3 Trainingstage am Stück geschafft", check: s => s.longestStreak >= 3 },
+  { id: "streak5", icon: "flame", label: "5er Serie", desc: "5 Trainingstage am Stück geschafft", check: s => s.longestStreak >= 5 },
+  { id: "streak10", icon: "flame", label: "10er Serie", desc: "10 Trainingstage am Stück geschafft", check: s => s.longestStreak >= 10 },
+  { id: "units10", icon: "dumbbell", label: "10 Einheiten", desc: "10 Trainingseinheiten abgeschlossen", check: s => s.completed >= 10 },
+  { id: "units25", icon: "dumbbell", label: "25 Einheiten", desc: "25 Trainingseinheiten abgeschlossen", check: s => s.completed >= 25 },
+  { id: "units50", icon: "dumbbell", label: "50 Einheiten", desc: "50 Trainingseinheiten abgeschlossen", check: s => s.completed >= 50 },
+  { id: "firstRecord", icon: "trophy", label: "Erster Rekord", desc: "Erstes Gewicht oder Wdh. geloggt", check: s => s.hasAnySetLog },
+  { id: "perfectWeek", icon: "sparkle", label: "Perfekte Woche", desc: "Eine ganze Woche komplett geschafft", check: s => s.hasAnyPerfectWeek }
 ];
 function hasAnySetLog() {
   const logs = loadSetLogs();
@@ -4013,7 +4204,7 @@ function renderBadgesContent() {
   const statuses = getBadgeStatus();
   return "<div class='badge-grid'>" + statuses.map(b =>
     "<div class='badge-card" + (b.unlocked ? " unlocked" : " locked") + "'>"
-    + "<div class='badge-icon'>" + (b.unlocked ? b.icon : "&#128274;") + "</div>"
+    + "<div class='badge-icon'>" + iconHTML(b.unlocked ? b.icon : "lock", 26) + "</div>"
     + "<div class='badge-label'>" + b.label + "</div>"
     + "<div class='badge-desc'>" + b.desc + "</div>"
     + "</div>"
@@ -4026,7 +4217,7 @@ function checkForNewBadges() {
   const newlyUnlocked = getBadgeStatus().find(b => b.unlocked && !seen[b.id]);
   if (!newlyUnlocked) return;
   markBadgeSeen(newlyUnlocked.id);
-  showToast(newlyUnlocked.icon + " Abzeichen freigeschaltet: " + newlyUnlocked.label);
+  showToast(iconHTML(newlyUnlocked.icon, 15) + "Abzeichen freigeschaltet: " + newlyUnlocked.label);
 }
 
 function initSplash() {

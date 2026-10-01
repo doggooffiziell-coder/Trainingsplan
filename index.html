@@ -110,7 +110,7 @@
   /* Liquid-Glass-Flächen (Sheets, Timer-Overlay, Toast, Tab-Leiste) brauchen einen deckenden
      Ersatz-Hintergrund, wenn der Browser kein backdrop-filter unterstützt. */
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-    .info-sheet, .rest-timer-overlay, .pr-toast, .tab-switch { background: var(--bg-alt) !important; }
+    .info-sheet, .rest-timer-overlay, .pr-toast, .tab-switch, .splash-icon-badge, .splash-stat, .splash-steps { background: var(--bg-alt) !important; }
   }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
@@ -177,9 +177,24 @@
     0%, 100% { transform: translate(0, 0) scale(1); }
     50% { transform: translate(12px, -10px) scale(1.08); }
   }
+  @keyframes splashRise {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .splash-rise { animation: splashRise 0.55s cubic-bezier(.22,.9,.32,1) both; }
 
-  .splash-brand { display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 1; }
-  .splash-icon { width: 72px; height: 72px; filter: drop-shadow(0 4px 10px rgba(var(--cobalt-rgb),0.35)); }
+  .splash-brand { display: flex; flex-direction: column; align-items: center; gap: 14px; z-index: 1; }
+  .splash-icon-badge {
+    width: 96px; height: 96px;
+    border-radius: 26px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--glass-bg);
+    -webkit-backdrop-filter: blur(18px) saturate(170%);
+    backdrop-filter: blur(18px) saturate(170%);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 14px 32px rgba(var(--cobalt-rgb),0.25), inset 0 1px 0 rgba(255,255,255,0.08);
+  }
+  .splash-icon { width: 60px; height: 60px; filter: drop-shadow(0 4px 10px rgba(var(--cobalt-rgb),0.35)); }
   .splash-icon.spinning {
     animation: iconSpin 1s linear infinite;
     transform-origin: 50% 50%;
@@ -219,9 +234,11 @@
   }
   .splash-stat {
     position: relative;
-    background: linear-gradient(180deg, var(--bg-alt-2), var(--bg-alt));
-    border: 1px solid var(--line);
-    border-radius: 10px;
+    background: var(--glass-bg);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    backdrop-filter: blur(16px) saturate(160%);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
     padding: 11px 4px 9px;
     text-align: center;
     overflow: hidden;
@@ -355,7 +372,15 @@
     width: 220px;
     margin-top: 4px;
     z-index: 1;
+    background: var(--glass-bg);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    backdrop-filter: blur(16px) saturate(160%);
+    border: 1px solid var(--glass-border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    transition: background 0.2s ease, border-color 0.2s ease;
   }
+  .splash-steps:empty { background: none; border-color: transparent; padding: 0; }
   .splash-step {
     display: flex;
     align-items: center;
@@ -374,6 +399,7 @@
     border-radius: 50%;
     border: 2px solid var(--line);
     position: relative;
+    display: flex; align-items: center; justify-content: center;
   }
   .splash-step.active .step-icon {
     border-color: var(--line);
@@ -385,15 +411,8 @@
     border: none;
     background: var(--green);
   }
-  .splash-step.done .step-icon::after {
-    content: "";
-    position: absolute;
-    left: 3.5px; top: 2px;
-    width: 5px; height: 8px;
-    border-right: 2px solid #00050f;
-    border-bottom: 2px solid #00050f;
-    transform: rotate(45deg);
-  }
+  .step-icon .ui-icon { color: #00050f; opacity: 0; transition: opacity 0.15s ease; }
+  .splash-step.done .step-icon .ui-icon { opacity: 1; }
   @keyframes stepSpin { to { transform: rotate(360deg); } }
   .splash-start-btn {
     margin-top: 14px;
@@ -1492,21 +1511,23 @@
   <div class="splash-orb splash-orb-1"></div>
   <div class="splash-orb splash-orb-2"></div>
 
-  <div class="splash-brand">
-    <canvas id="splashIconCanvas" width="72" height="72" class="splash-icon"></canvas>
+  <div class="splash-brand splash-rise" style="animation-delay:0.02s;">
+    <div class="splash-icon-badge">
+      <canvas id="splashIconCanvas" width="72" height="72" class="splash-icon"></canvas>
+    </div>
     <div class="splash-wordmark-row"><div class="splash-wordmark">TRAININGSPLAN</div></div>
     <div class="splash-tagline" id="splashTagline">Disziplin schlägt Motivation, wenn Motivation ausbleibt.</div>
   </div>
 
-  <div class="splash-stats" id="splashStats"></div>
+  <div class="splash-stats splash-rise" id="splashStats" style="animation-delay:0.1s;"></div>
 
-  <div class="splash-quote" id="splashQuote"></div>
+  <div class="splash-quote splash-rise" id="splashQuote" style="animation-delay:0.18s;"></div>
 
-  <div class="splash-text" id="splashText">Training starten<span class="dots"><span>.</span><span>.</span><span>.</span></span></div>
+  <div class="splash-text splash-rise" id="splashText" style="animation-delay:0.24s;">Training starten<span class="dots"><span>.</span><span>.</span><span>.</span></span></div>
   <div class="splash-steps" id="splashSteps"></div>
-  <button class="splash-start-btn" id="splashStartBtn">Training beginnen</button>
+  <button class="splash-start-btn splash-rise" id="splashStartBtn" style="animation-delay:0.3s;">Training beginnen</button>
 
-  <div class="splash-footer">
+  <div class="splash-footer splash-rise" style="animation-delay:0.36s;">
     v1.0 · Deine Daten werden mit deinem Account synchronisiert
     <div class="made-by">Made by Linus with <svg viewBox="0 0 24 24" fill="none"><defs><linearGradient id="madeByGrad" x1="2" y1="2" x2="22" y2="22"><stop offset="0%" stop-color="var(--cobalt-light)"/><stop offset="100%" stop-color="var(--cobalt)"/></linearGradient></defs><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" fill="url(#madeByGrad)"/></svg></div>
   </div>
@@ -3787,7 +3808,7 @@ setInterval(render, 15000);
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
   const dpr = Math.max(window.devicePixelRatio || 1, 2);
-  const cssSize = 72;
+  const cssSize = 60;
   canvas.width = cssSize * dpr;
   canvas.height = cssSize * dpr;
   canvas.style.width = cssSize + "px";
@@ -4331,9 +4352,10 @@ function initSplash() {
       const row = document.createElement("div");
       row.className = "splash-step";
       row.id = "splashStep" + idx;
-      row.innerHTML = '<span class="step-icon"></span><span class="step-label">' + label + '</span>';
+      row.innerHTML = '<span class="step-icon">' + iconHTML("check", 9) + '</span><span class="step-label">' + label + '</span>';
       stepsBox.appendChild(row);
     });
+    drawAllIconCanvases(stepsBox);
 
     let i = 0;
     function next() {
